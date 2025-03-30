@@ -1,0 +1,350 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #231F20;
+  color: #ffffff;
+}
+
+.dashboard-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #2e2e2e;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+}
+
+header h1 {
+  color: #70C7BA;
+  margin: 0;
+}
+
+.logout {
+  color: #ffffff;
+  background-color: #49EACB;
+  padding: 8px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.panel {
+  background-color: #2e2e2e;
+  padding: 25px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.panel h2 {
+  margin-top: 0;
+  color: #49EACB;
+}
+
+button {
+  background-color: #70C7BA;
+  color: #000;
+  font-weight: bold;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+button:hover {
+  background-color: #49EACB;
+}
+
+.wallet-popup {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.popup-content {
+  background-color: #2e2e2e;
+  padding: 30px;
+  border-radius: 10px;
+  width: 350px;
+  text-align: center;
+}
+
+.popup-content h3 {
+  color: #49EACB;
+  margin-bottom: 15px;
+}
+
+.popup-content button {
+  background-color: #70C7BA;
+  color: #000;
+  padding: 10px 20px;
+  border: none;
+  margin: 10px 5px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.popup-content button:hover {
+  background-color: #49EACB;
+}
+
+.seed-container {
+  position: relative;
+  background-color: #1f1f1f;
+  border: 1px solid #70C7BA;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 10px 0;
+  text-align: left;
+  color: #ffffff;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.copy-seed {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #70C7BA;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.copy-seed:hover {
+  background: #49EACB;
+}
+
+.seed-box {
+  font-family: monospace;
+  background-color: #f2f2f2;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  margin-bottom: 15px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.popup-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.popup-actions button {
+  font-size: 1.2em;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.seed-display {
+  background: #f1f1f1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  margin: 10px 0;
+  position: relative;
+}
+
+.seed-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.seed-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  background-color: #fff;
+  color: #231F20; /* readable Kaspa dark */
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-family: monospace;
+  font-size: 14px;
+}
+.seed-grid span {
+  background-color: #e0f7f4;
+  padding: 4px 6px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+#refresh-wallet {
+  cursor: pointer;
+  margin-left: 10px;
+  transition: transform 0.2s ease;
+}
+
+#refresh-wallet.spin {
+  animation: spin 1s linear infinite;
+}
+
+.wallet-box {
+  background: #111;
+  padding: 20px;
+  border-radius: 8px;
+  color: #fff;
+}
+
+.wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Add these styles to your existing dashboard.css file */
+
+/* Token Table Styles */
+.token-box {
+  margin-top: 20px;
+}
+
+.token-table-container {
+  overflow-x: auto;
+  margin-top: 15px;
+}
+
+.token-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.token-table th {
+  background-color: #333;
+  color: #70C7BA;
+  text-align: left;
+  padding: 12px 15px;
+}
+
+.token-table td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #444;
+}
+
+.token-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.token-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #444;
+}
+
+.token-name {
+  font-weight: bold;
+}
+
+.token-address {
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 3px;
+}
+
+.send-btn {
+  background-color: #70C7BA;
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.send-btn:hover {
+  background-color: #49EACB;
+}
+
+.empty-state, .loading-state {
+  text-align: center;
+  color: #aaa;
+  padding: 20px 0;
+}
+
+/* Token Send Modal Styles */
+.form-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #49EACB;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 8px;
+  background-color: #444;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.form-group input:focus {
+  border-color: #70C7BA;
+  outline: none;
+}
+
+.button-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+/* Add these styles to dashboard.css */
+
+.token-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  color: white;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.token-icon-wrapper {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.token-icon-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}

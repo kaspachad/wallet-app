@@ -1,0 +1,161 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcrypt');
+const path = require('path');
+const fs = require('fs');
+const { spawn, exec } = require('child_process');
+
+function getAvailablePort(base = 20000) {
+  return base + Math.floor(Math.random() * 1000);
+}
+
+function startWalletDaemon(keysFile, password, port, res) {
+  console.log('Attempting to start kaspawallet daemon for existing wallet...');
+
+  const daemon = spawn('kaspawallet', [
+    'start-daemon',
+    '-f', keysFile,
+    '-p', password,
+    '-s', '127.0.0.1:16110',
+    '-l', `127.0.0.1:${port}`
+  ]);
+
+  daemon.stdout.on('data', (data) => {
+    const out = data.toString();
+    console.log(`Daemon stdout: ${out}`);
+
+    if (out.includes('Wallet is synced and ready for operation')) {
+      console.log('✅ Wallet is ready — waiting 1s before requesting address...');
+      setTimeout(() => {
+        const getAddrCmd = `kaspawallet new-address --daemonaddress 127.0.0.1:${port}`;
+        exec(getAddrCmd, (err, stdout2, stderr2) => {
+          if (err) {
+            console.error('Failed to generate address:', stderr2);
+            return res.status(500).json({ message: 'Wallet created but address generation failed' });
+          }
+
+          const address = stdout2.trim().split('\n').find(l => l.includes('kaspa:')) || stdout2.trim().split('\n').pop();
+          console.log('Wallet address generated:', address);
+          return res.json({ message: 'Wallet created and daemon started', address });
+        });
+      }, 1000);
+    }
+  });
+
+  daemon.stderr.on('data', (data) => {
+    console.error(`Daemon stderr: ${data.toString()}`);
+  });
+
+  daemon.on('close', (code) => {
+    console.log(`Daemon exited with code ${code}`);
+  });
+
+  daemon.on('error', (err) => {
+    console.error('Failed to start daemon process:', err);
+  });
+}
+
+router.post('/wallet/create', async (req, res) => {
+  const db = req.db;
+  const user = req.session.user;
+
+  if (!user) return res.status(401).json({ message: 'Not logged in' });
+
+  try {
+    const port = getAvailablePort();
+    const keysFile = path.resolve(__dirname, `../wallets/${user.username}_${Date.now()}_keys.json`);
+    const walletPassword = user.password || 'kaspa';
+    const hashedPassword = await bcrypt.hash(walletPassword, 10);
+
+    const createCmd = `kaspawallet create -f "${keysFile}" -p ${walletPassword} -y`;
+    console.log('Running:', createCmd);
+
+    exec(createCmd, async (error, stdout, stderr) => {
+      if (error) {
+        console.error('Wallet creation failed:', stderr);
+        return res.status(500).json({ message: 'Wallet creation failed', stderr });
+      }
+
+      console.log('Wallet created output:\n', stdout);
+
+      const hashedSeed = 'manual-seed-dump-required';
+
+      db.query(
+        'INSERT INTO wallets (wallet_file, hashed_password, hashed_seed) VALUES (?, ?, ?)',
+        [keysFile, hashedPassword, hashedSeed],
+        (err, walletResult) => {
+          if (err) {
+            console.error('DB insert failed:', err);
+            return res.status(500).json({ message: 'Database insert error' });
+          }
+
+          const walletId = walletResult.insertId;
+
+          db.query(
+            'UPDATE users SET wallet_id = ?, daemon_port = ? WHERE id = ?',
+            [walletId, port, user.id],
+            (err2) => {
+              if (err2) {
+                console.error('DB update failed:', err2);
+                return res.status(500).json({ message: 'Database update error' });
+              }
+
+              startWalletDaemon(keysFile, walletPassword, port, res);
+            }
+          );
+        }
+      );
+    });
+  } catch (err) {
+    console.error('Create wallet error:', err);
+    res.status(500).json({ message: 'Server error during wallet creation' });
+  }
+});
+
+router.get('/wallet/status', (req, res) => {
+  const db = req.db;
+  const user = req.session.user;
+
+  if (!user) return res.status(401).json({ message: 'Not logged in' });
+
+  db.query('SELECT wallet_id FROM users WHERE id = ?', [user.id], (err, rows) => {
+    if (err) {
+      console.error('Wallet status error:', err);
+      return res.status(500).json({ message: 'Server error checking wallet status' });
+    }
+
+    const attached = rows.length > 0 && rows[0].wallet_id !== null;
+    res.json({ attached });
+  });
+});
+
+router.get('/wallet/address', (req, res) => {
+  const db = req.db;
+  const user = req.session.user;
+
+  if (!user) return res.status(401).json({ message: 'Not logged in' });
+
+  db.query('SELECT daemon_port FROM users WHERE id = ?', [user.id], (err, rows) => {
+    if (err || !rows.length || !rows[0].daemon_port) {
+      return res.status(400).json({ message: 'Wallet not connected or daemon not running' });
+    }
+
+    const port = rows[0].daemon_port;
+    const getAddrCmd = `kaspawallet balance -v --daemonaddress 127.0.0.1:${port}`;
+
+    exec(getAddrCmd, (error, stdout, stderr) => {
+      if (error) {
+        console.error('Show address failed:', stderr);
+        return res.status(500).json({ message: 'Failed to get wallet address' });
+      }
+
+      const line = stdout.trim().split('\n').find(l => l.includes('kaspa:'));
+      if (!line) return res.status(500).json({ message: 'No address found in balance output' });
+      const address = line.split(/\s+/)[0];
+      res.json({ address });
+    });
+  });
+});
+
+module.exports = router;
+

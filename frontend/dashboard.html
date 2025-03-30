@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kaspa Wallet Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css" />
+  <!-- Add Font Awesome for better icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <div class="dashboard-container">
+
+    <header>
+      <h1>Kaspa Wallet</h1>
+      <a class="logout" href="/logout">Logout</a>
+    </header>
+
+    <div class="panel">
+      <!-- Navigation menu -->
+      <div class="wallet-nav">
+        <ul>
+          <li class="active"><a href="#wallet">Wallet</a></li>
+          <li><a href="#history">History</a></li>
+          <li><a href="#settings">Settings</a></li>
+        </ul>
+        <button id="refresh-wallet" class="icon-button" title="Refresh balances">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      </div>
+
+      <!-- Wallet Panel -->
+      <div id="wallet-panel" class="content-panel">
+        <div class="wallet-address-container">
+          <div class="label">Wallet Address</div>
+          <div class="address-box">
+            <span id="wallet-address">Loading...</span>
+            <button id="copy-wallet" class="copy-button" title="Copy address">
+              <i class="far fa-copy"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="wallet-stats">
+          <div class="stat-item">
+            <div class="stat-label">Status</div>
+            <div class="stat-value status" id="wallet-status">Loading...</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Balance</div>
+            <div class="stat-value" id="wallet-balance">Loading...</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Estimated Value</div>
+            <div class="stat-value" id="wallet-usd">Loading...</div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button id="send-coins" class="primary-button">
+            <i class="fas fa-paper-plane"></i> Send KAS
+          </button>
+          <button id="receive-coins" class="secondary-button">
+            <i class="fas fa-qrcode"></i> Receive
+          </button>
+        </div>
+      </div>
+
+      <!-- History Panel -->
+<div id="history-panel" class="content-panel" style="display: none;">
+  <div class="panel-header">
+    <h3>Transaction History</h3>
+    <div class="filter-controls">
+      <select id="history-filter">
+        <option value="all">All Transactions</option>
+        <option value="received">Received</option>
+        <option value="sent">Sent</option>
+        <option value="tokens">Token Transfers</option>
+      </select>
+    </div>
+  </div>
+  
+  <div id="transaction-list" class="transaction-list">
+    <!-- Transaction items will be populated dynamically -->
+    <div class="empty-state">
+      <i class="fas fa-history"></i>
+      <div>No transaction history available</div>
+    </div>
+  </div>
+  
+  <div class="pagination">
+    <button id="prev-page" class="pagination-button" disabled>
+      <i class="fas fa-chevron-left"></i>
+    </button>
+    <span id="page-indicator">Page 0 of 0</span>
+    <button id="next-page" class="pagination-button" disabled>
+      <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+</div>
+      <!-- Settings Panel -->
+      <div id="settings-panel" class="content-panel" style="display: none;">
+        <div class="panel-header">
+          <h3>Wallet Settings</h3>
+        </div>
+        
+        <div class="settings-sections">
+          <div class="settings-section">
+            <h4>Security</h4>
+            
+            <div class="setting-item">
+              <div class="setting-details">
+                <div class="setting-title">Backup Wallet</div>
+                <div class="setting-description">Download a backup of your wallet keys</div>
+              </div>
+              <button id="backup-wallet" class="secondary-button">
+                <i class="fas fa-download"></i> Backup
+              </button>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-details">
+                <div class="setting-title">View Seed Phrase</div>
+                <div class="setting-description">Display your recovery seed phrase</div>
+              </div>
+              <button id="view-seed" class="secondary-button">
+                <i class="fas fa-eye"></i> View
+              </button>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-details">
+                <div class="setting-title">Change Password</div>
+                <div class="setting-description">Update your wallet encryption password</div>
+              </div>
+              <button id="change-password" class="secondary-button">
+                <i class="fas fa-key"></i> Change
+              </button>
+            </div>
+          </div>
+          
+          <div class="settings-section">
+            <h4>Display</h4>
+            
+            <div class="setting-item">
+              <div class="setting-details">
+                <div class="setting-title">Currency</div>
+                <div class="setting-description">Set your preferred display currency</div>
+              </div>
+              <select id="currency-select" class="settings-select">
+                <option value="usd">USD</option>
+                <option value="eur">EUR</option>
+                <option value="gbp">GBP</option>
+                <option value="jpy">JPY</option>
+              </select>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-details">
+                <div class="setting-title">Theme</div>
+                <div class="setting-description">Choose light or dark theme</div>
+              </div>
+              <div class="toggle-switch">
+                <input type="checkbox" id="theme-toggle" checked>
+                <label for="theme-toggle"></label>
+                <span class="toggle-label">Light</span>
+              </div>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-details">
+                <div class="setting-title">Date Format</div>
+                <div class="setting-description">Set your preferred date format</div>
+              </div>
+              <select id="date-format" class="settings-select">
+                <option value="mdy">MM/DD/YYYY</option>
+                <option value="dmy">DD/MM/YYYY</option>
+                <option value="ymd">YYYY-MM-DD</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="settings-section">
+            <h4>Network</h4>
+            
+            <div class="setting-item">
+              <div class="setting-details">
+                <div class="setting-title">Kaspa Node</div>
+                <div class="setting-description">Configure connection to Kaspa node</div>
+              </div>
+              <div id="node-status" class="node-status">
+                <span class="status-indicator"></span>
+                Loading...
+              </div>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-details">
+                <div class="setting-title">Auto-refresh</div>
+                <div class="setting-description">Automatically refresh balance and transactions</div>
+              </div>
+              <div class="toggle-switch">
+                <input type="checkbox" id="refresh-toggle" checked>
+                <label for="refresh-toggle"></label>
+                <span class="toggle-label">On</span>
+              </div>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-details">
+                <div class="setting-title">Advanced Settings</div>
+                <div class="setting-description">Configure advanced wallet options</div>
+              </div>
+              <button id="advanced-settings" class="secondary-button">
+                <i class="fas fa-cog"></i> Configure
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KRC20 Tokens Panel -->
+    <div class="panel token-box">
+      <h2>KRC-20 Tokens</h2>
+      
+      <div class="token-table-container">
+        <table class="token-table">
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Symbol</th>
+              <th>Balance</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="token-table-body">
+            <tr>
+              <td colspan="4" class="loading-state">Loading tokens...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/js/wallet/dashboard.js"></script>
+</body>
+</html>
