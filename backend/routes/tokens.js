@@ -8,6 +8,7 @@ const WebSocket = require('ws');
 const axios = require('axios');
 const { generateTokenLogo } = require('../utils/tokenLogoGenerator');
 const { fetchTokenLogo } = require('../utils/logoFetcher');
+const { ensureAuthenticated } = require('../middleware/authMiddleware');
 
 // Kaspa WebSocket URL and CoinGecko API URL
 const wsUrl = 'ws://127.0.0.1:16110'; // Change to your local node address
@@ -205,7 +206,7 @@ router.get('/token/refresh-logo/:symbol', async (req, res) => {
 
 
 // Get all KRC-20 tokens and user balances
-router.get('/tokens', async (req, res) => {
+router.get('/tokens', ensureAuthenticated, async (req, res) => {
     const db = req.db;
     const user = req.session.user;
     
@@ -284,7 +285,7 @@ router.get('/tokens', async (req, res) => {
 });
 
 // Send tokens to another user (implemented via database for now)
-router.post('/tokens/send', async (req, res) => {
+router.post('/tokens/send', ensureAuthenticated, async (req, res) => {
     const db = req.db;
     const user = req.session.user;
     

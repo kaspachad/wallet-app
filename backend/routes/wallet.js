@@ -7,6 +7,7 @@ const { spawn, exec } = require('child_process');
 const net = require('net');
 const util = require('util');
 const execPromise = util.promisify(exec);
+const { ensureAuthenticated } = require('../middleware/authMiddleware');
 
 // Helper function to get a random available port
 function getAvailablePort(base = 20000) {
@@ -151,7 +152,7 @@ async function checkBalance(port, res) {
 }
 
 // Create a new wallet
-router.post('/wallet/create', async (req, res) => {
+router.post('/wallet/create', ensureAuthenticated, async (req, res) => {
   const db = req.db;
   const user = req.session.user;
   const walletPassword = req.body.password;
@@ -265,7 +266,7 @@ router.post('/wallet/create', async (req, res) => {
 });
 
 // Check if user has a wallet
-router.get('/wallet/status', (req, res) => {
+router.get('/wallet/status', ensureAuthenticated, (req, res) => {
   const db = req.db;
   const user = req.session.user;
   
@@ -290,7 +291,7 @@ router.get('/wallet/status', (req, res) => {
 });
 
 // Get user's wallet address
-router.get('/wallet/address', (req, res) => {
+router.get('/wallet/address', ensureAuthenticated, (req, res) => {
   const db = req.db;
   const user = req.session.user;
   
@@ -320,7 +321,7 @@ router.get('/wallet/address', (req, res) => {
 // Replace this section in your routes/wallet.js file
 
 // Get wallet balance
-router.get('/wallet/balance', (req, res) => {
+router.get('/wallet/balance', ensureAuthenticated, (req, res) => {
   const db = req.db;
   const user = req.session.user;
   if (!user) return res.status(401).json({ message: 'Not logged in' });
@@ -396,7 +397,7 @@ router.get('/wallet/balance', (req, res) => {
 });
 
 // Send KAS to an address
-router.post('/wallet/send', async (req, res) => {
+router.post('/wallet/send', ensureAuthenticated, async (req, res) => {
   const db = req.db;
   const user = req.session.user;
   

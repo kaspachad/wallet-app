@@ -1027,19 +1027,22 @@ if (sendKasBtn) {
     modal.innerHTML = `
       <div class="popup-content">
         <h3>Send KAS</h3>
-        <form id="send-kas-form">
-          <div class="form-group">
-            <label for="kas-recipient">Recipient Address:</label>
-            <input type="text" id="kas-recipient" required placeholder="kaspa:...">
-          </div>
-          <div class="form-group">
-            <label for="kas-amount">Amount:</label>
-            <input type="number" id="kas-amount" required min="0.00000001" step="0.00000001" placeholder="0.0">
-          </div>
-          <div class="form-group">
-            <label for="kas-password">Wallet Password:</label>
-            <input type="password" id="kas-password" required placeholder="Enter your wallet password">
-          </div>
+        
+<form id="send-kas-form" autocomplete="off">
+<form id="send-kas-form" autocomplete="off">
+  <div class="form-group">
+    <label for="kas-recipient">Recipient Address:</label>
+    <input type="text" id="kas-recipient" name="kas_recipient" required placeholder="kaspa:..." autocomplete="off">
+  </div>
+  <div class="form-group">
+    <label for="kas-amount">Amount:</label>
+    <input type="number" id="kas-amount" name="kas_amount" required min="0.00000001" step="0.00000001" placeholder="0.0" autocomplete="off">
+  </div>
+  <div class="form-group">
+    <label for="kas-password">Wallet Password:</label>
+    <input type="password" id="kas-password" name="wallet_send_password" required placeholder="Enter your wallet password" autocomplete="new-password">
+  </div>
+
           <div class="send-summary" style="display: none;">
             <div class="summary-item">
               <span class="summary-label">Amount:</span>
