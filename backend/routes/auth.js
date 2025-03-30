@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
+const { ensureAuthenticated } = require('../middleware/authMiddleware');
 
 const SECRET_KEY = process.env.JWT_SECRET || 'your_fallback_secret';
 
@@ -87,6 +88,15 @@ router.post('/login', async (req, res) => {
 
     res.json({ message: 'Login successful' });
   });
+});
+
+router.get('/admin/test', (req, res) => {
+  res.send("Admin route is wired up");
+});
+
+router.post('/admin/create-user', (req, res) => {
+  console.log("Create user route hit");
+  res.json({ message: "OK" });
 });
 
 module.exports = router;
