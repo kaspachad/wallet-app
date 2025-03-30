@@ -95,9 +95,34 @@ router.get('/admin/test', (req, res) => {
 });
 
 router.post('/admin/create-user', (req, res) => {
-  console.log("Create user route hit");
-  res.json({ message: "OK" });
+  try {
+    const db = req.db; 
+
+    const sessionUser = req.session.user;
+    if (sessionUser.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const {
+      first_name, last_name, email, phone,
+      department, title, role, password
+    } = req.body;
+
+    const hashedPassword = password
+
+     db.query(
+      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+      [email, hashedPassword, role]
+    );
+
+    res.status(201).json({ message: 'User created' });
+  } catch (err) {
+    console.error('Error creating user:', err);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
 });
+
+
 
 module.exports = router;
 
