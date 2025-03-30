@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create User</title>
+  <link rel="stylesheet" href="/css/auth.css" />
+</head>
+<body>
+  <div class="auth-container">
+    <img src="/img/kaspa-logo.png" alt="Kaspa Logo" />
+    <h2>Create New User</h2>
+    <form id="create-user-form" autocomplete="off">
+      <input type="text" id="first_name" placeholder="First Name" required />
+      <input type="text" id="last_name" placeholder="Last Name" required />
+      <input type="email" id="email" placeholder="Email (Username)" required />
+      <input type="text" id="phone" placeholder="Phone" />
+      <input type="text" id="department" placeholder="Department (optional)" />
+      <input type="text" id="title" placeholder="Title (optional)" />
+
+      <select id="role" required>
+        <option value="">Select Role</option>
+        <option value="employee">Employee</option>
+        <option value="manager">Manager</option>
+        <option value="supervisor">Supervisor</option>
+      </select>
+
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="temp_password" placeholder="Temporary Password" required />
+        <button type="button" id="generate_password">Generate</button>
+      </div>
+
+      <button type="submit" style="margin-top: 15px;">Create User</button>
+    </form>
+  </div>
+
+  <script src="/js/create-user.js"></script>
+</body>
+</html>
+
