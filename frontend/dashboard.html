@@ -23,6 +23,7 @@
           <li class="active"><a href="#wallet">Wallet</a></li>
           <li><a href="#history">History</a></li>
           <li><a href="#settings">Settings</a></li>
+          <li><a href="#kns">KNS Lookup</a></li>
         </ul>
         <button id="refresh-wallet" class="icon-button" title="Refresh balances">
           <i class="fas fa-sync-alt"></i>
@@ -218,7 +219,27 @@
           </div>
         </div>
       </div>
+
+
+<div id="kns" class="content-panel" style="display: none;">
+  <div class="panel">
+    <h2>KNS Lookup</h2>
+    <div class="kns-input-group">
+      <div class="kns-input-wrapper">
+        <input type="text" id="kns-input" placeholder="Enter domain name" onkeydown="if(event.key === 'Enter') checkKNS()">
+        <span class="kns-suffix">.kas</span>
+      </div>
+      <button onclick="checkKNS()">Check</button>
     </div>
+    <div id="kns-result" style="margin-top: 15px;">
+      <!-- Result will be shown here -->
+    </div>
+  </div>
+</div>
+
+
+<!-- Final DIV for anything you want inside the panels -->
+</div>
 
     <!-- KRC20 Tokens Panel -->
     <div class="panel token-box">

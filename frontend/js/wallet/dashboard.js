@@ -107,6 +107,36 @@ document.addEventListener('DOMContentLoaded', async () => {
       statusEl.textContent = 'Error';
     }
   }
+
+  //Function for the KNS lookup
+  window.checkKNS = async function() {
+  //const domain = document.getElementById('kns-input').value.trim();
+  const domain = document.getElementById('kns-input').value.trim() + '.kas';
+
+  const resultDiv = document.getElementById('kns-result');
+  resultDiv.innerHTML = 'Checking...';
+
+  try {
+    const res = await fetch(`/api/kns/check?domain=${domain}`);
+    const data = await res.json();
+
+    if (data.available) {
+      resultDiv.innerHTML = `
+        <strong>Domain Name:</strong> ${data.domain}<br>
+        <strong>Status:</strong> <span style="color: green;">Available</span>
+      `;
+    } else {
+      resultDiv.innerHTML = `
+        <strong>Domain Name:</strong> ${data.domain}<br>
+        <strong>Status:</strong> <span style="color: red;">Taken</span><br>
+        <strong>Owner:</strong> ${data.owner}
+      `;
+    }
+  } catch (err) {
+    resultDiv.innerHTML = 'Error fetching domain info.';
+  }
+}
+
   
   // Helper function to parse Kaspa balance output
   function parseKaspaBalance(balanceOutput) {
@@ -970,13 +1000,15 @@ function formatTransactionDate(timestamp) {
   const walletPanel = document.getElementById('wallet-panel');
   const historyPanel = document.getElementById('history-panel');
   const settingsPanel = document.getElementById('settings-panel');
-  
+  const knsPanel = document.getElementById('kns');
+
   // Function to switch tabs
   function switchTab(tabId) {
     // Hide all panels
     walletPanel.style.display = 'none';
     historyPanel.style.display = 'none';
     settingsPanel.style.display = 'none';
+    knsPanel.style.display = 'none';
     
     // Remove active class from all tabs
     tabLinks.forEach(link => {
@@ -995,6 +1027,9 @@ function formatTransactionDate(timestamp) {
     } else if (tabId === 'settings') {
       settingsPanel.style.display = 'block';
       document.querySelector('a[href="#settings"]').parentElement.classList.add('active');
+    } else if (tabId === 'kns') {
+       knsPanel.style.display = 'block';
+       document.querySelector('a[href="#kns"]').parentElement.classList.add('active');
     }
   }
   
