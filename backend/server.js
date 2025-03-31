@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const session = require('express-session');
 const walletRoutes = require('./routes/wallet');
 const tokenRoutes = require('./routes/tokens');
+const knsRoutes = require('./routes/kns');
 
 const DEBUG = true; // ✅ Turn this off to disable all console logs
 
@@ -82,6 +83,7 @@ app.use(express.static(frontendPath));
 app.use('/api', authRoutes);
 app.use('/api', walletRoutes);
 app.use('/api', tokenRoutes);
+app.use('/api/kns', knsRoutes);
 
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
