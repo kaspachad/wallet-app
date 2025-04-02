@@ -1,0 +1,31 @@
+# Node modules (never commit these)
+node_modules/
+
+# Local environment settings
+.env
+
+# Wallets and sensitive user data
+backend/wallets/
+backend/frontend/public/tokens
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Compiled output (if used later)
+dist/
+build/
+
+# IDE/editor-specific
+.vscode/
+.idea/
+
+# DB dumps (optional
+
