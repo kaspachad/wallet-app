@@ -554,53 +554,93 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ==================== Transaction History Functions ====================
 
-// Replace the transaction history functions in dashboard.js
-
 // Function to load transaction history
-async function loadTransactionHistory() {
+async function loadTransactionHistory(page = 0) {
+  const address = document.getElementById('wallet-address')?.textContent.trim();
   const transactionList = document.getElementById('transaction-list');
-  
-  if (!transactionList) return;
-  
-  // Show loading state
-  transactionList.innerHTML = '<div class="loading-state">Loading transaction history...</div>';
-  
+  const historyFilter = document.getElementById('history-filter');
+
+  if (!address || !transactionList || !historyFilter) return;
+
+  const limit = 10;
+  const offset = page * limit;
+  const filter = historyFilter.value;
+
+  transactionList.innerHTML = `
+    <div class="empty-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <div>Loading transactions...</div>
+    </div>`;
+
   try {
-    // In a real implementation, this would fetch data from your API
-    // Placeholder for API call - replace with real API endpoint when available
-    // const response = await fetch('/api/transactions', {
-    //   credentials: 'include'
-    // });
-    // const data = await response.json();
-    
-    // For now, just show empty state
-    const empty = true; // Set to false when you have real data
-    
-    if (empty) {
-      transactionList.innerHTML = '<div class="empty-state">No transaction history available</div>';
-      
-      // Disable pagination
-      const prevButton = document.getElementById('prev-page');
-      const nextButton = document.getElementById('next-page');
-      const pageIndicator = document.getElementById('page-indicator');
-      
-      if (prevButton) prevButton.disabled = true;
-      if (nextButton) nextButton.disabled = true;
-      if (pageIndicator) pageIndicator.textContent = 'Page 0 of 0';
+    const encodedAddress = encodeURIComponent(address);
+    const res = await fetch(`https://api.kaspa.org/addresses/${encodedAddress}/full-transactions?limit=${limit}&offset=${offset}&resolve_previous_outpoints=no`);
+    const data = await res.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      transactionList.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-history"></i>
+          <div>No transaction history found.</div>
+        </div>`;
       return;
     }
-    
-    // When you have real data, uncomment and use this:
-    // if (data && data.transactions && data.transactions.length > 0) {
-    //   renderTransactions(data.transactions);
-    //   updatePagination(data.pagination);
-    // } else {
-    //   transactionList.innerHTML = '<div class="empty-state">No transaction history available</div>';
-    // }
-    
-  } catch (error) {
-    console.error('Error loading transaction history:', error);
-    transactionList.innerHTML = '<div class="empty-state">Error loading transactions</div>';
+
+    // Filter
+    const filtered = data.filter(tx => {
+      const isSent = tx.inputs.some(i => i.previous_outpoint_address === address);
+      if (filter === 'sent') return isSent;
+      if (filter === 'received') return !isSent;
+      return true;
+    });
+
+    transactionList.innerHTML = '';
+    filtered.forEach(tx => {
+      const isSent = tx.inputs.some(i => i.previous_outpoint_address === address);
+      const receivedAmount = tx.outputs
+        .filter(o => o.script_public_key_address === address)
+        .reduce((sum, o) => sum + o.amount, 0);
+      const sentAmount = tx.inputs
+        .filter(i => i.previous_outpoint_address === address)
+        .reduce((sum, i) => sum + i.previous_outpoint_amount, 0);
+      const amount = isSent ? sentAmount : receivedAmount;
+
+      const direction = isSent ? 'Sent' : 'Received';
+      const shortTxid = tx.transaction_id.slice(0, 8) + '...';
+      const date = new Date(tx.accepting_block_time).toLocaleString();
+
+      const item = document.createElement('div');
+      item.className = 'transaction-item';
+      item.innerHTML = `
+        <div class="transaction-icon">
+          <i class="fas ${isSent ? 'fa-arrow-up sent' : 'fa-arrow-down received'}"></i>
+        </div>
+        <div class="transaction-details">
+          <div class="tx-direction">${direction}</div>
+          <div class="tx-id">TXID: <span title="${tx.transaction_id}">${shortTxid}</span></div>
+          <div class="tx-date">${date}</div>
+        </div>
+        <div class="transaction-amount ${isSent ? 'sent' : 'received'}">
+          ${(amount / 1e8).toFixed(8)} KAS
+        </div>`;
+      transactionList.appendChild(item);
+    });
+
+   // update page numbers
+   updatePagination({
+    current: page + 1,
+    total: Math.ceil(filtered.length / limit)
+   });
+
+
+
+  } catch (err) {
+    console.error('Error loading transaction history:', err);
+    transactionList.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>Error loading history</div>
+      </div>`;
   }
 }
 
@@ -670,37 +710,32 @@ function renderTransactions(transactions) {
 
 // Function to update pagination controls - for future use
 function updatePagination(pagination) {
-  const prevButton = document.getElementById('prev-page');
-  const nextButton = document.getElementById('next-page');
-  const pageIndicator = document.getElementById('page-indicator');
-  
+  const prevButton = document.getElementById('history-prev');
+  const nextButton = document.getElementById('history-next');
+  const pageIndicator = document.getElementById('history-page-num');
+
   if (!prevButton || !nextButton || !pageIndicator) return;
-  
+
   if (!pagination || !pagination.total) {
-    // No pagination data
     pageIndicator.textContent = 'Page 0 of 0';
     prevButton.disabled = true;
     nextButton.disabled = true;
     return;
   }
-  
-  // Update page indicator
+
   pageIndicator.textContent = `Page ${pagination.current} of ${pagination.total}`;
-  
-  // Update button states
   prevButton.disabled = pagination.current <= 1;
   nextButton.disabled = pagination.current >= pagination.total;
-  
-  // Add click handlers
+
   prevButton.onclick = () => {
     if (pagination.current > 1) {
-      fetchPagedTransactions(pagination.current - 1);
+      loadTransactionHistory(pagination.current - 1);
     }
   };
-  
+
   nextButton.onclick = () => {
     if (pagination.current < pagination.total) {
-      fetchPagedTransactions(pagination.current + 1);
+      loadTransactionHistory(pagination.current + 1);
     }
   };
 }
@@ -1094,6 +1129,19 @@ fetch('/api/wallet/view-seed')
     switchTab('wallet');
   }
   
+const historyTab = document.querySelector('a[href="#history"]');
+const historyFilterEl = document.getElementById('history-filter');
+
+if (historyTab) {
+  historyTab.addEventListener('click', () => loadTransactionHistory(0));
+}
+
+if (historyFilterEl) {
+  historyFilterEl.addEventListener('change', () => loadTransactionHistory(0));
+}
+
+  
+  
   // ==================== Handle Send and Receive buttons ====================
   
   // Handle the Send KAS button
@@ -1391,5 +1439,4 @@ if (address && canvas) {
   // Set up refresh interval for price
   setInterval(updateKaspaPrice, 60000); // Update price every minute
 });
-
 
