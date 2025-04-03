@@ -542,5 +542,45 @@ router.get('/wallet/export', ensureAuthenticated, async (req, res) => {
   }
 });
 
+router.get('/wallet/view-seed', ensureAuthenticated, async (req, res) => {
+  const userId = req.session.user.id;
+  const password = req.session.user.walletPassword;
+
+  if (!password) {
+    return res.status(403).json({ error: 'Missing wallet password in session' });
+  }
+
+  try {
+    const [[walletData]] = await db.query(`
+      SELECT w.wallet_file 
+      FROM users u 
+      JOIN wallets w ON u.wallet_id = w.wallet_id 
+      WHERE u.id = ?
+    `, [userId]);
+
+    if (!walletData) {
+      return res.status(404).json({ error: 'Wallet not found' });
+    }
+
+    const walletPath = walletData.wallet_file;
+
+    const { stdout } = await execPromise(
+      `kaspawallet dump-unencrypted-data -f "${walletPath}" -p "${password}" -y`
+    );
+
+    const seedMatch = stdout.match(/Mnemonic #1:\s*([\s\S]*?)\n/);
+    const seed = seedMatch ? seedMatch[1].replace(/\s+/g, ' ').trim() : null;
+
+    if (!seed) {
+      return res.status(500).json({ error: 'Failed to extract seed' });
+    }
+
+    res.json({ success: true, seed });
+  } catch (err) {
+    console.error('View seed error:', err);
+    res.status(500).json({ error: 'Unable to view seed phrase' });
+  }
+});
+
 
 module.exports = router;

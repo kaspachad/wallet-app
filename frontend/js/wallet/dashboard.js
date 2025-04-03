@@ -948,8 +948,37 @@ if (backupWalletBtn) {
   const viewSeedBtn = document.getElementById('view-seed');
   if (viewSeedBtn) {
     viewSeedBtn.addEventListener('click', function() {
-      alert('This would prompt for your password and then display your seed phrase.');
-      // In a real implementation, this would show a password prompt and then the seed
+fetch('/api/wallet/view-seed')
+  .then(res => res.json())
+  .then(data => {
+    if (!data.success) {
+      alert('Error: ' + data.error);
+      return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'wallet-popup';
+    modal.innerHTML = `
+      <div class="popup-content">
+        <h3>Your Seed Phrase</h3>
+        <p style="font-family: monospace; padding: 10px; background: #eee; border-radius: 5px;">
+          ${data.seed}
+        </p>
+        <div style="margin-top: 15px;">
+          <button id="close-seed-modal">Close</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('close-seed-modal').addEventListener('click', () => {
+      modal.remove();
+    });
+  })
+  .catch(err => {
+    console.error('Failed to fetch seed:', err);
+    alert('Failed to retrieve seed phrase.');
+  });
     });
   }
 
