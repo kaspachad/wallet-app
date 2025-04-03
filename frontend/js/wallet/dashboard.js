@@ -918,13 +918,31 @@ function formatTransactionDate(timestamp) {
   // ==================== Settings Functions ====================
 
   // Handle backup wallet button
-  const backupWalletBtn = document.getElementById('backup-wallet');
-  if (backupWalletBtn) {
-    backupWalletBtn.addEventListener('click', function() {
-      alert('This would download a backup of your wallet keys.');
-      // In a real implementation, this would trigger a download of encrypted wallet data
-    });
-  }
+const backupWalletBtn = document.getElementById('backup-wallet');
+if (backupWalletBtn) {
+  backupWalletBtn.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/wallet/export');
+      if (!res.ok) throw new Error('Export failed');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'kaspa-seed.txt';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+    } catch (err) {
+      alert('Failed to export wallet seed.');
+      console.error(err);
+    }
+  });
+}
+
 
   // Handle view seed phrase button
   const viewSeedBtn = document.getElementById('view-seed');

@@ -8,6 +8,7 @@ const net = require('net');
 const util = require('util');
 const execPromise = util.promisify(exec);
 const { ensureAuthenticated } = require('../middleware/authMiddleware');
+const db = require('../config/db');
 
 // Helper function to get a random available port
 function getAvailablePort(base = 20000) {
@@ -156,6 +157,7 @@ router.post('/wallet/create', ensureAuthenticated, async (req, res) => {
   const db = req.db;
   const user = req.session.user;
   const walletPassword = req.body.password;
+
 
   if (!user || !walletPassword) {
     return res.status(400).json({ message: 'Missing session or password' });
@@ -493,5 +495,52 @@ router.post('/wallet/send', ensureAuthenticated, async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
+
+router.get('/wallet/export', ensureAuthenticated, async (req, res) => {
+  const userId = req.session.user.id;
+  console.log(`🔍 Export route hit by user ${userId}`);
+
+  try {
+    const [[userWallet]] = await db.query(
+      `SELECT w.wallet_file, w.hashed_password 
+       FROM users u 
+       JOIN wallets w ON u.wallet_id = w.wallet_id 
+       WHERE u.id = ?`, [userId]);
+
+    if (!userWallet) {
+      console.log('❌ Wallet not found');
+      return res.status(404).json({ error: 'Wallet not found' });
+    }
+
+    const walletPath = userWallet.wallet_file;
+    const password = req.session.user.walletPassword;
+    console.log('📁 Wallet path being used:', walletPath);
+    console.log('🔑 Password from session:', password);
+
+
+    console.log('🔑 Running dump-unencrypted-data...');
+    const { stdout } = await execPromise(`kaspawallet dump-unencrypted-data -f "${walletPath}" -p "${password}" -y`);
+    console.log('✅ Command executed');
+
+    const seedMatch = stdout.match(/Mnemonic #1:\s*([\s\S]*?)\n/);
+    const seed = seedMatch ? seedMatch[1].replace(/\s+/g, ' ').trim() : null;
+ 
+    console.log('🧠 Extracted seed:', seed);
+
+    if (!seed) {
+      console.log('⚠️ Seed not found in dump');
+      return res.status(500).json({ error: 'Seed phrase not found in wallet' });
+    }
+
+    res.setHeader('Content-Disposition', 'attachment; filename="kaspa-seed.txt"');
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(seed);
+
+  } catch (err) {
+    console.error('Export error:', err);
+    res.status(500).json({ error: 'Failed to export seed phrase' });
+  }
+});
+
 
 module.exports = router;
