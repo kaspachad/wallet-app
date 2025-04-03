@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/css/dashboard.css" />
   <!-- Add Font Awesome for better icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
 <body>
   <div class="dashboard-container">
@@ -64,6 +65,11 @@
           <button id="receive-coins" class="secondary-button">
             <i class="fas fa-qrcode"></i> Receive
           </button>
+		 <div id="qrContainer" style="display: none; margin-top: 20px; text-align: center;">
+          <canvas id="kaspaQR" style="margin: 10px auto;"></canvas>
+           <div id="qr-address-text" style="margin-top: 10px; font-size: 14px;"></div>
+         </div>
+
         </div>
       </div>
 
@@ -269,3 +275,4 @@
   <script src="/js/wallet/dashboard.js"></script>
 </body>
 </html>
+

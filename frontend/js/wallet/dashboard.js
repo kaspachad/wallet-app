@@ -1263,7 +1263,20 @@ function updateSummary() {
 }
 
 
- 
+ // Show QR Code for the address
+ function showQRCodeForAddress(address) {
+  const container = document.getElementById('qrContainer');
+  const canvas = document.getElementById('kaspaQR');
+  const display = document.getElementById('qr-address-text');
+  const kaspaURI = `kaspa:${address}`;
+
+  container.style.display = 'block';
+  display.textContent = address;
+
+  QRCode.toCanvas(canvas, kaspaURI, { width: 220 }, function (error) {
+    if (error) console.error('QR generation error:', error);
+  });
+}
  
   // Handle the Receive button
   const receiveBtn = document.getElementById('receive-coins');
@@ -1277,23 +1290,28 @@ function updateSummary() {
       
       modal.innerHTML = `
         <div class="popup-content">
-          <h3>Receive KAS</h3>
-          <p>Share your address to receive KAS:</p>
-          <div class="address-box" style="margin-bottom: 15px;">
-            <span>${address}</span>
-            <button id="popup-copy-address" class="copy-button" title="Copy address">
-              <i class="far fa-copy"></i>
-            </button>
-          </div>
-          <div class="qr-placeholder" style="width: 200px; height: 200px; background-color: #f5f5f7; margin: 0 auto; display: flex; justify-content: center; align-items: center;">
-            <span>QR Code Placeholder</span>
-          </div>
-          <div style="margin-top: 15px;">
-            <button id="close-receive-modal">Close</button>
-          </div>
-        </div>
+  <h3>Receive KAS</h3>
+  <p>Share your address to receive KAS:</p>
+  <div class="address-box" style="margin-bottom: 15px;">
+    <span>${address}</span>
+    <button id="popup-copy-address" class="copy-button" title="Copy address">
+      <i class="far fa-copy"></i>
+    </button>
+  </div>
+  <canvas id="kaspaQR" width="200" height="200" style="margin: 0 auto;"></canvas>
+  <div style="margin-top: 15px;">
+    <button id="close-receive-modal">Close</button>
+  </div>
+</div>
       `;
       
+	  const canvas = modal.querySelector('#kaspaQR');
+if (address && canvas) {
+  QRCode.toCanvas(canvas, `kaspa:${address}`, { width: 200 }, function (error) {
+    if (error) console.error('QR Code generation error:', error);
+  });
+}
+	  
       document.body.appendChild(modal);
       
       document.getElementById('close-receive-modal').addEventListener('click', () => {
@@ -1326,4 +1344,5 @@ function updateSummary() {
   // Set up refresh interval for price
   setInterval(updateKaspaPrice, 60000); // Update price every minute
 });
+
 
