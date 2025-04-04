@@ -647,16 +647,7 @@ async function loadTransactionHistory(page = 0) {
       const amount = isSent ? sentAmount : receivedAmount;
 
       const direction = isSent ? 'Sent' : 'Received';
-
-      let shortTxidLink = 'N/A';
-const realTxid = tx.txid || tx.transaction_id;
-
-if (realTxid) {
-  const explorerUrl = `https://explorer.kaspa.org/txs/${realTxid}`;
-  shortTxidLink = `<a href="${explorerUrl}" target="_blank">${realTxid.slice(0, 8)}...</a>`;
-}
-
-
+      const shortTxid = tx.transaction_id.slice(0, 8) + '...';
       const date = new Date(tx.accepting_block_time).toLocaleString();
 
       const item = document.createElement('div');
@@ -667,7 +658,7 @@ if (realTxid) {
         </div>
         <div class="transaction-details">
           <div class="tx-direction">${direction}</div>
-          <div class="tx-id">TXID: <span title="${tx.transaction_id}">${shortTxidLink}</span></div>
+          <div class="tx-id">TXID: <span title="${tx.transaction_id}">${shortTxid}</span></div>
           <div class="tx-date">${date}</div>
         </div>
         <div class="transaction-amount ${isSent ? 'sent' : 'received'}">
@@ -1488,5 +1479,5 @@ if (address && canvas) {
   
   // Set up refresh interval for price
   setInterval(updateKaspaPrice, 60000); // Update price every minute
-});  // <-- DOMContentLoaded
+});
 
