@@ -6,6 +6,54 @@ document.addEventListener('DOMContentLoaded', async () => {
   const copyBtn = document.getElementById('copy-wallet');
   const refreshBtn = document.getElementById('refresh-wallet');
   const tokenTableBody = document.getElementById('token-table-body');
+
+  // === Load settings on page load ===
+  async function loadUserSettings() {
+  try {
+    const response = await fetch('/settings', {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    const settings = await response.json();
+
+    // Theme
+    const themeToggle = document.getElementById('theme-toggle');
+    if (settings.theme === 'dark') {
+      document.body.classList.add('dark-theme');
+      if (themeToggle) themeToggle.checked = false;
+      document.querySelector('label[for="theme-toggle"] + span').textContent = 'Dark';
+    } else {
+      document.body.classList.remove('dark-theme');
+      if (themeToggle) themeToggle.checked = true;
+      document.querySelector('label[for="theme-toggle"] + span').textContent = 'Light';
+    }
+
+    // Currency
+    const currencySelect = document.getElementById('currency-select');
+    if (currencySelect && settings.currency) {
+      currencySelect.value = settings.currency;
+    }
+
+    // Date format
+    const dateFormatSelect = document.getElementById('date-format');
+    if (dateFormatSelect && settings.date_format) {
+      dateFormatSelect.value = settings.date_format;
+    }
+
+    // Auto-refresh
+    const autoRefreshToggle = document.getElementById('refresh-toggle');
+    if (autoRefreshToggle) {
+      autoRefreshToggle.checked = settings.auto_refresh;
+      const label = document.querySelector('label[for="refresh-toggle"] + span');
+      if (label) label.textContent = settings.auto_refresh ? 'On' : 'Off';
+    }
+
+  } catch (err) {
+    console.error('Failed to load settings:', err);
+  }
+}
+
   
   // Function to load wallet status, address and balance
   async function loadWalletInfo() {
@@ -137,7 +185,43 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 }
 
-  
+
+// Save Settings button press - try to save all settings
+document.getElementById('save-settings').addEventListener('click', async () => {
+  const themeToggle = document.getElementById('theme-toggle');
+  const currencySelect = document.getElementById('currency-select');
+  const dateFormatSelect = document.getElementById('date-format');
+  const autoRefreshToggle = document.getElementById('refresh-toggle');
+
+  const payload = {
+    theme: themeToggle && themeToggle.checked ? 'light' : 'dark',
+    currency: currencySelect ? currencySelect.value : 'USD',
+    date_format: dateFormatSelect ? dateFormatSelect.value : 'MM/DD/YYYY',
+    auto_refresh: autoRefreshToggle ? autoRefreshToggle.checked : true
+  };
+
+  try {
+    const response = await fetch('/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      alert('Settings saved successfully!');
+    } else {
+      alert('Failed to save settings: ' + result.message);
+    }
+  } catch (err) {
+    console.error('Error saving settings:', err);
+    alert('An error occurred while saving settings.');
+  }
+});
+
+
+ 
   // Helper function to parse Kaspa balance output
   function parseKaspaBalance(balanceOutput) {
     try {
@@ -1164,6 +1248,7 @@ if (changePasswordBtn) {
 
   // Handle theme toggle
   const themeToggle = document.getElementById('theme-toggle');
+  
   if (themeToggle) {
     themeToggle.addEventListener('change', function() {
       if (this.checked) {
@@ -1553,8 +1638,12 @@ if (address && canvas) {
   await loadWalletInfo();
   await updateKaspaPrice();
   await loadTokens();
+
+  // Load user settings
+  loadUserSettings();
+
   
   // Set up refresh interval for price
   setInterval(updateKaspaPrice, 60000); // Update price every minute
-});  // <-- DOMContentLoaded
+});
 

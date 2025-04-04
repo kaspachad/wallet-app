@@ -3,11 +3,14 @@ const path = require('path');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const mysql = require('mysql2');
-const authRoutes = require('./routes/auth');
 const session = require('express-session');
+
 const walletRoutes = require('./routes/wallet');
 const tokenRoutes = require('./routes/tokens');
 const knsRoutes = require('./routes/kns');
+const settingsRoutes = require('./routes/settings');
+const authRoutes = require('./routes/auth');
+
 
 const DEBUG = true; // ✅ Turn this off to disable all console logs
 
@@ -84,6 +87,7 @@ app.use('/api', authRoutes);
 app.use('/api', walletRoutes);
 app.use('/api', tokenRoutes);
 app.use('/api/kns', knsRoutes);
+app.use('/settings', settingsRoutes);
 
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
