@@ -158,28 +158,17 @@ router.post('/wallet/create', ensureAuthenticated, async (req, res) => {
   const user = req.session.user;
   const walletPassword = req.body.password;
 
-
   if (!user || !walletPassword) {
     return res.status(400).json({ message: 'Missing session or password' });
   }
 
-  // Store wallet password in session for API calls
   req.session.walletPassword = walletPassword;
-  
-  // Generate a unique port for this wallet daemon
   const port = getAvailablePort();
-  
-  // Create a unique path for wallet keys file
   const keysFile = path.resolve(__dirname, `../wallets/${user.username}_${Date.now()}_keys.json`);
-  
-  // Hash the password for storage
   const hashedPassword = await bcrypt.hash(walletPassword, 10);
 
   console.log(`Creating wallet for user ${user.username} at ${keysFile}`);
-
-  // Use kaspawallet CLI to create a new wallet
   const createCmd = `kaspawallet create -f "${keysFile}" -p ${walletPassword} -y`;
-  console.log('Running:', createCmd);
 
   exec(createCmd, async (error, stdout, stderr) => {
     if (error) {
@@ -188,36 +177,32 @@ router.post('/wallet/create', ensureAuthenticated, async (req, res) => {
     }
 
     console.log('Wallet created, extracting seed phrase...');
-
-    // Extract the seed phrase from the wallet
     const dumpCmd = `kaspawallet dump-unencrypted-data -f "${keysFile}" -p ${walletPassword} -y`;
+
     exec(dumpCmd, async (err, dumpOut, dumpErr) => {
       if (err) {
         console.error('Error extracting seed phrase:', dumpErr);
         return res.status(500).json({ message: 'Error extracting seed phrase' });
       }
 
-      // Extract the seed phrase using regex
       const seedMatch = dumpOut.match(/Mnemonic #1:\s*([\s\S]*?)\n/);
       const seedPhrase = seedMatch ? seedMatch[1].replace(/\s+/g, ' ').trim() : null;
       const hashedSeed = seedPhrase ? await bcrypt.hash(seedPhrase, 10) : null;
-      
-      console.log('🧠 Extracted seed phrase successfully');
 
       if (!seedPhrase) {
         return res.status(500).json({ message: 'Seed phrase not found in wallet output' });
       }
 
-      // Start the wallet daemon
+      console.log('🧠 Extracted seed phrase successfully');
+
       const daemonResult = await startWalletDaemon(keysFile, walletPassword, port);
       if (!daemonResult.success) {
         console.error('Failed to start wallet daemon:', daemonResult.message);
-        // Continue anyway as we can start it later
+        // Continue anyway; user can restart daemon later
       }
 
-      // Wait for daemon to be ready before generating address
+      // Wait briefly before generating address
       setTimeout(() => {
-        // Generate a new address
         const addrCmd = `kaspawallet new-address --daemonaddress 127.0.0.1:${port}`;
         exec(addrCmd, (err2, stdout2, stderr2) => {
           if (err2 || !stdout2.includes('kaspa:')) {
@@ -225,11 +210,10 @@ router.post('/wallet/create', ensureAuthenticated, async (req, res) => {
             return res.status(500).json({ message: 'Failed to retrieve address' });
           }
 
-          // Extract Kaspa address from output
           const address = stdout2.trim().split('\n').find(line => line.includes('kaspa:')).trim();
           console.log('📬 New address generated:', address);
 
-          // Save wallet details to database
+          // Insert wallet record
           db.query(
             'INSERT INTO wallets (wallet_file, hashed_password, hashed_seed, main_address) VALUES (?, ?, ?, ?)',
             [keysFile, hashedPassword, hashedSeed, address],
@@ -240,32 +224,34 @@ router.post('/wallet/create', ensureAuthenticated, async (req, res) => {
               }
 
               const walletId = walletResult.insertId;
-              
-              // Associate wallet with the user
+
+              // Update user with wallet link and daemon port
               db.query(
-                'UPDATE users SET wallet_id = ?, daemon_port = ? WHERE id = ?',
-                [walletId, port, user.id],
+                'UPDATE users SET wallet_id = ?, daemon_port = ?, password = ? WHERE id = ?',
+                [walletId, port, hashedPassword, user.id],
                 (err4) => {
                   if (err4) {
                     console.error('DB update failed:', err4);
                     return res.status(500).json({ message: 'Database update error' });
                   }
 
-                  // Return success with seed phrase and address
+                  // ✅ Final success response
                   return res.json({
-                    message: 'Wallet created and daemon started',
-                    address,
-                    seedPhrase // Send the extracted seed back to frontend
+                    success: true,
+                    seedPhrase,
+                    address
                   });
                 }
               );
             }
           );
         });
-      }, 2000); // Wait 2 seconds for daemon to be ready
+      }, 1500);
     });
   });
 });
+
+
 
 // Check if user has a wallet
 router.get('/wallet/status', ensureAuthenticated, (req, res) => {
@@ -397,6 +383,73 @@ router.get('/wallet/balance', ensureAuthenticated, (req, res) => {
     }
   });
 });
+
+
+// Change Wallet Password
+// Change Wallet Password (Safe rebuild w/ optional backup and new wallet file)
+router.post('/change-password', async (req, res) => {
+  console.log('[Backend] /wallet/change-password route hit');
+
+  const { oldPassword, newPassword, backup = false } = req.body;
+  const userId = req.session.user?.id;
+
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const [[walletUser]] = await db.query(
+      `SELECT w.wallet_file, w.hashed_password, u.id as user_id 
+       FROM wallets w 
+       JOIN users u ON u.wallet_id = w.wallet_id 
+       WHERE u.id = ?`,
+      [userId]
+    );
+
+    if (!walletUser) return res.status(404).json({ error: 'Wallet not found' });
+
+    const { wallet_file, hashed_password } = walletUser;
+    const walletPath = wallet_file;
+
+    const match = await bcrypt.compare(oldPassword, hashed_password);
+    if (!match) return res.status(403).json({ error: 'Old password incorrect' });
+
+    // 1. Extract seed phrase
+    const dumpCmd = `kaspawallet dump-unencrypted-data -f "${walletPath}" -p ${oldPassword} -y`;
+    const { stdout, stderr } = await execPromise(dumpCmd);
+    if (stderr) throw new Error('Dump failed: ' + stderr);
+
+    const seedMatch = stdout.match(/Mnemonic #1:\s*([\s\S]*?)\n/);
+    const seedPhrase = seedMatch ? seedMatch[1].replace(/\s+/g, ' ').trim() : null;
+    if (!seedPhrase) return res.status(500).json({ error: 'Failed to extract seed' });
+
+    // 2. Optional backup
+    if (backup) {
+      const backupPath = walletPath + '.bak';
+      fs.copyFileSync(walletPath, backupPath);
+      console.log(`[Backup] Saved backup at: ${backupPath}`);
+    }
+
+    // 3. Use a new wallet file to avoid lock conflicts
+    const newWalletPath = walletPath.replace('.json', `_new_${Date.now()}.json`);
+    const importCmd = `echo "${seedPhrase}" | kaspawallet create --import -f "${newWalletPath}" -p ${newPassword} -y`;
+    const { stderr: createErr } = await execPromise(importCmd);
+    if (createErr) throw new Error('Wallet creation failed: ' + createErr);
+
+    // 4. Hash and update DB
+    const newHashed = await bcrypt.hash(newPassword, 10);
+    await db.query(`UPDATE wallets SET wallet_file = ?, hashed_password = ? WHERE wallet_file = ?`, [newWalletPath, newHashed, walletPath]);
+    await db.query(`UPDATE users SET password = ? WHERE id = ?`, [newHashed, userId]);
+
+    // ✅ Update session with new wallet password
+    req.session.user.walletPassword = newPassword;
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[ChangePassword] Error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
+
 
 // Send KAS to an address
 router.post('/wallet/send', ensureAuthenticated, async (req, res) => {

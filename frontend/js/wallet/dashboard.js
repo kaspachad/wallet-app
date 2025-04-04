@@ -1028,7 +1028,6 @@ if (backupWalletBtn) {
   });
 }
 
-
   // Handle view seed phrase button
   const viewSeedBtn = document.getElementById('view-seed');
   if (viewSeedBtn) {
@@ -1067,14 +1066,83 @@ fetch('/api/wallet/view-seed')
     });
   }
 
-  // Handle change password button
-  const changePasswordBtn = document.getElementById('change-password');
-  if (changePasswordBtn) {
-    changePasswordBtn.addEventListener('click', function() {
-      alert('This would open a form to change your wallet password.');
-      // In a real implementation, this would show a password change form
+// Handle change password button
+const changePasswordBtn = document.getElementById('change-password');
+if (changePasswordBtn) {
+  changePasswordBtn.addEventListener('click', function () {
+    const modal = document.createElement('div');
+    modal.className = 'wallet-popup';
+
+    modal.innerHTML = `
+      <div class="popup-content">
+        <h3>Change Wallet Password</h3>
+        <div class="form-group">
+          <label for="old-password">Current Password</label>
+          <input type="password" id="old-password" placeholder="Enter current password" />
+        </div>
+        <div class="form-group">
+          <label for="new-password">New Password</label>
+          <input type="password" id="new-password" placeholder="Enter new password" />
+        </div>
+        <div class="popup-actions">
+          <button id="submit-change-password" class="primary-button">Update</button>
+          <button id="cancel-change-password" class="secondary-button">Cancel</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Cancel button
+    document.getElementById('cancel-change-password').addEventListener('click', () => {
+      modal.remove();
     });
-  }
+
+    // Submit logic
+    document.getElementById('submit-change-password').addEventListener('click', async () => {
+      const oldPassword = document.getElementById('old-password').value.trim();
+      const newPassword = document.getElementById('new-password').value.trim();
+      const backup = false; // toggle manually
+
+      if (!oldPassword || !newPassword) {
+        alert('Please fill in both fields.');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ oldPassword, newPassword, backup })
+        });
+
+        const rawText = await response.text();
+        let result;
+
+        try {
+          result = JSON.parse(rawText);
+        } catch (e) {
+          console.error('[ChangePassword] Failed to parse response:', rawText);
+          alert('Server returned an unexpected response.');
+          return;
+        }
+
+        if (result.success) {
+          alert('Password updated successfully.');
+          modal.remove();
+        } else {
+          alert(result.error || 'Failed to change password.');
+        }
+      } catch (err) {
+        console.error('[ChangePassword] Fetch failed:', err);
+        alert('Network or server error occurred.');
+      }
+    });
+  });
+}   
+
+
 
   // Handle currency selection
   const currencySelect = document.getElementById('currency-select');
