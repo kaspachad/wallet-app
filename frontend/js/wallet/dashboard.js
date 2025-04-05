@@ -678,8 +678,12 @@ async function loadKasFyiTransactions(address, page = 0, limit = 20) {
   }
 }
 
+// ========= Transaction History ===========
 
-// Function to load transaction history
+/**
+ * Loads and displays transaction history with proper pagination
+ * @param {number} page - The page number (zero-based)
+ */
 async function loadTransactionHistory(page = 0) {
   const address = document.getElementById('wallet-address')?.textContent.trim();
   const transactionList = document.getElementById('transaction-list');
@@ -687,10 +691,12 @@ async function loadTransactionHistory(page = 0) {
 
   if (!address || !transactionList || !historyFilter) return;
 
-  const limit = 10;
+  // Set pagination parameters - make sure limit is reasonably sized
+  const limit = 10; // Number of transactions per page
   const offset = page * limit;
   const filter = historyFilter.value;
 
+  // Display loading state
   transactionList.innerHTML = `
     <div class="empty-state">
       <i class="fas fa-spinner fa-spin"></i>
@@ -698,11 +704,48 @@ async function loadTransactionHistory(page = 0) {
     </div>`;
 
   try {
+    // Make API request with proper pagination parameters
     const encodedAddress = encodeURIComponent(address);
-    const res = await fetch(`https://api.kaspa.org/addresses/${encodedAddress}/full-transactions?limit=${limit}&offset=${offset}&resolve_previous_outpoints=no`);
+    
+    // Ensure offset is correctly calculated from page number
+    const calculatedOffset = page * limit;
+    console.log(`Fetching transactions: page ${page}, offset ${calculatedOffset}, limit ${limit}`);
+    
+    const apiUrl = `https://api.kaspa.org/addresses/${encodedAddress}/full-transactions`;
+    const queryParams = `?limit=${limit}&offset=${calculatedOffset}&resolve_previous_outpoints=no`;
+    
+    // Force no caching to ensure fresh results
+    const fetchOptions = {
+      method: 'GET',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    };
+    
+    const res = await fetch(apiUrl + queryParams, fetchOptions);
+    
+    if (!res.ok) {
+      throw new Error(`API returned status ${res.status}`);
+    }
+    
+    // Log response headers to debug pagination
+    console.log('Response headers:', 
+      Object.fromEntries([...res.headers.entries()].map(([k, v]) => [k, v]))
+    );
+    
     const data = await res.json();
+    console.log(`Fetched ${data.length} transactions`);
 
     if (!Array.isArray(data) || data.length === 0) {
+      if (page > 0) {
+        // If no data on page > 0, go back to page 0
+        console.log('No data found on this page, going back to first page');
+        loadTransactionHistory(0);
+        return;
+      }
+      
       transactionList.innerHTML = `
         <div class="empty-state">
           <i class="fas fa-history"></i>
@@ -711,7 +754,7 @@ async function loadTransactionHistory(page = 0) {
       return;
     }
 
-    // Filter
+    // Filter transactions based on selected filter
     const filtered = data.filter(tx => {
       const isSent = tx.inputs.some(i => i.previous_outpoint_address === address);
       if (filter === 'sent') return isSent;
@@ -719,134 +762,116 @@ async function loadTransactionHistory(page = 0) {
       return true;
     });
 
+    if (filtered.length === 0) {
+      transactionList.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-filter"></i>
+          <div>No ${filter} transactions found.</div>
+        </div>`;
+      return;
+    }
+
+    // Clear the transaction list before adding new transactions
     transactionList.innerHTML = '';
+
+    // Process and render each transaction
     filtered.forEach(tx => {
       const isSent = tx.inputs.some(i => i.previous_outpoint_address === address);
+      
+      // Calculate amounts
       const receivedAmount = tx.outputs
         .filter(o => o.script_public_key_address === address)
         .reduce((sum, o) => sum + o.amount, 0);
+      
       const sentAmount = tx.inputs
         .filter(i => i.previous_outpoint_address === address)
         .reduce((sum, i) => sum + i.previous_outpoint_amount, 0);
+      
       const amount = isSent ? sentAmount : receivedAmount;
+      const directionIcon = isSent ? '↑' : '↓';
+      const label = isSent ? 'Sent' : 'Received';
+      const amountClass = isSent ? 'kas-red' : 'kas-green';
 
-      const direction = isSent ? 'Sent' : 'Received';
+      const txid = tx.txid || tx.transaction_id;
+      const explorerUrl = `https://explorer.kaspa.org/txs/${txid}`;
+      
+      // Fix timestamp multiplication by 1000 if needed
+      const timestamp = typeof tx.accepting_block_time === 'number' && tx.accepting_block_time < 10000000000
+        ? tx.accepting_block_time * 1000  // Convert seconds to milliseconds if needed
+        : tx.accepting_block_time;
+      
+      const date = new Date(timestamp).toLocaleString();
 
-      let shortTxidLink = 'N/A';
-const realTxid = tx.txid || tx.transaction_id;
-
-if (realTxid) {
-  const explorerUrl = `https://explorer.kaspa.org/txs/${realTxid}`;
-  shortTxidLink = `<a href="${explorerUrl}" target="_blank">${realTxid.slice(0, 8)}...</a>`;
-}
-
-
-      const date = new Date(tx.accepting_block_time).toLocaleString();
-
+      // Create transaction element with 3-part vertical layout
       const item = document.createElement('div');
       item.className = 'transaction-item';
+      
+      // Structure each transaction into 3 distinct parts
       item.innerHTML = `
-        <div class="transaction-icon">
-          <i class="fas ${isSent ? 'fa-arrow-up sent' : 'fa-arrow-down received'}"></i>
+        <div class="tx-row">
+          <!-- Part 1: Top (direction and amount) -->
+          <div class="tx-top">
+            <span class="tx-direction-label">${directionIcon} ${label}</span>
+            <span class="tx-amount ${amountClass}">${(amount / 1e8).toFixed(8)} KAS</span>
+          </div>
+          
+          <!-- Part 2: Middle (transaction ID as link) -->
+          <div class="tx-id">
+            <a href="${explorerUrl}" target="_blank">${txid}</a>
+          </div>
+          
+          <!-- Part 3: Bottom (date and time) -->
+          <div class="tx-timestamp">
+            <small>${date}</small>
+          </div>
         </div>
-        <div class="transaction-details">
-          <div class="tx-direction">${direction}</div>
-          <div class="tx-id">TXID: <span title="${tx.transaction_id}">${shortTxidLink}</span></div>
-          <div class="tx-date">${date}</div>
-        </div>
-        <div class="transaction-amount ${isSent ? 'sent' : 'received'}">
-          ${(amount / 1e8).toFixed(8)} KAS
-        </div>`;
+      `;
+
       transactionList.appendChild(item);
     });
 
-   // update page numbers
-   updatePagination({
-    current: page + 1,
-    total: Math.ceil(filtered.length / limit)
-   });
-
-
+    // Calculate pagination information
+    // First try to get total from X-Total-Count header
+    let totalCount = parseInt(res.headers.get('X-Total-Count') || '0', 10);
+    
+    // If header is not available, estimate based on current data
+    if (!totalCount || totalCount === 0) {
+      // If we got a full page of results, assume there are more
+      const hasMore = data.length >= limit;
+      totalCount = hasMore ? (page + 2) * limit : (page + 1) * limit;
+    }
+    
+    const totalPages = Math.max(Math.ceil(totalCount / limit), 1);
+    const currentPage = page + 1; // Convert to 1-based for display
+    
+    console.log(`Pagination: page ${currentPage}/${totalPages}, total items: ${totalCount}`);
+    
+    // Update pagination controls
+    updatePagination({
+      current: currentPage,
+      total: totalPages,
+      hasMore: data.length === limit,
+      page: page // Keep track of the zero-based page
+    });
 
   } catch (err) {
     console.error('Error loading transaction history:', err);
     transactionList.innerHTML = `
       <div class="empty-state">
         <i class="fas fa-exclamation-triangle"></i>
-        <div>Error loading history</div>
+        <div>Error loading history: ${err.message}</div>
       </div>`;
   }
 }
 
-// Function to render transactions - for future use when you have real data
-function renderTransactions(transactions) {
-  const transactionList = document.getElementById('transaction-list');
-  
-  if (!transactionList) return;
-  
-  transactionList.innerHTML = '';
-  
-  if (!transactions || transactions.length === 0) {
-    transactionList.innerHTML = '<div class="empty-state">No transaction history available</div>';
-    return;
-  }
-  
-  transactions.forEach(tx => {
-    const txElement = document.createElement('div');
-    txElement.className = 'transaction-item';
-    
-    // Determine transaction type and icon
-    let iconClass = '';
-    let amountClass = '';
-    let iconHtml = '';
-    
-    if (tx.type === 'receive') {
-      iconClass = 'received';
-      iconHtml = '<i class="fas fa-arrow-down"></i>';
-      amountClass = 'positive';
-    } else if (tx.type === 'send') {
-      iconClass = 'sent';
-      iconHtml = '<i class="fas fa-arrow-up"></i>';
-      amountClass = 'negative';
-    } else if (tx.type === 'token') {
-      iconClass = 'token';
-      iconHtml = '<i class="fas fa-coins"></i>';
-      amountClass = tx.amount > 0 ? 'positive' : 'negative';
-    }
-    
-    // Format the amount
-    const formattedAmount = formatTransactionAmount(tx.amount, tx.currency);
-    
-    // Format the address (truncate it)
-    const addressLabel = tx.type === 'send' ? 'To: ' : 'From: ';
-    const truncatedAddress = truncateAddress(tx.address);
-    
-    // Format the date
-    const formattedDate = formatTransactionDate(tx.timestamp);
-    
-    txElement.innerHTML = `
-      <div class="transaction-icon ${iconClass}">
-        ${iconHtml}
-      </div>
-      <div class="transaction-details">
-        <div class="transaction-title">${tx.title}</div>
-        <div class="transaction-address">${addressLabel}${truncatedAddress}</div>
-        <div class="transaction-time">${formattedDate}</div>
-      </div>
-      <div class="transaction-amount ${amountClass}">
-        ${formattedAmount}
-      </div>
-    `;
-    
-    transactionList.appendChild(txElement);
-  });
-}
-
-// Function to update pagination controls - for future use
+/**
+ * Updates pagination controls with correct event handlers
+ * @param {Object} pagination - Pagination information
+ */
 function updatePagination(pagination) {
-  const prevButton = document.getElementById('history-prev');
-  const nextButton = document.getElementById('history-next');
-  const pageIndicator = document.getElementById('history-page-num');
+  const prevButton = document.getElementById('prev-page');
+  const nextButton = document.getElementById('next-page');
+  const pageIndicator = document.getElementById('page-indicator');
 
   if (!prevButton || !nextButton || !pageIndicator) return;
 
@@ -859,20 +884,60 @@ function updatePagination(pagination) {
 
   pageIndicator.textContent = `Page ${pagination.current} of ${pagination.total}`;
   prevButton.disabled = pagination.current <= 1;
-  nextButton.disabled = pagination.current >= pagination.total;
+  nextButton.disabled = pagination.current >= pagination.total && !pagination.hasMore;
 
-  prevButton.onclick = () => {
-    if (pagination.current > 1) {
-      loadTransactionHistory(pagination.current - 1);
+  // Remove all existing click event listeners
+  const newPrevButton = prevButton.cloneNode(true);
+  const newNextButton = nextButton.cloneNode(true);
+  
+  prevButton.parentNode.replaceChild(newPrevButton, prevButton);
+  nextButton.parentNode.replaceChild(newNextButton, nextButton);
+  
+  // Add new event listeners with clear console logging
+  newPrevButton.addEventListener('click', function() {
+    const prevPage = pagination.page - 1;
+    if (prevPage >= 0) {
+      console.log(`Navigating to previous page: ${prevPage} (will show as page ${prevPage + 1})`);
+      console.log(`This will set offset=${prevPage * 20} in the API request`);
+      loadTransactionHistory(prevPage);
     }
-  };
+  });
 
-  nextButton.onclick = () => {
-    if (pagination.current < pagination.total) {
-      loadTransactionHistory(pagination.current + 1);
-    }
-  };
+  newNextButton.addEventListener('click', function() {
+    const nextPage = pagination.page + 1;
+    console.log(`Navigating to next page: ${nextPage} (will show as page ${nextPage + 1})`);
+    console.log(`This will set offset=${nextPage * 20} in the API request`);
+    loadTransactionHistory(nextPage);
+  });
 }
+
+/**
+ * Helper to filter transactions by type
+ * @param {string} type - Filter type (all, sent, received)
+ */
+function filterTransactions(type) {
+  const filter = document.getElementById('history-filter');
+  if (filter) {
+    filter.value = type;
+    loadTransactionHistory(0); // Reset to first page
+  }
+}
+
+// Set up history filter change handler (for use in your existing DOMContentLoaded)
+function setupHistoryFilterHandler() {
+  const historyFilter = document.getElementById('history-filter');
+  if (historyFilter) {
+    historyFilter.addEventListener('change', () => {
+      loadTransactionHistory(0); // Reset to first page on filter change
+    });
+  }
+}
+
+// You can call this function from your existing DOMContentLoaded handler
+// setupHistoryFilterHandler();
+
+// =========================================
+
 
 // Function to fetch a specific page of transactions - for future use
 async function fetchPagedTransactions(page) {

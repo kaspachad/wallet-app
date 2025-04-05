@@ -1179,3 +1179,54 @@ body.dark-theme .pagination-button:not(:disabled):hover {
   font-size: 14px;
 }
 
+/**
+ * CSS for 3-part transaction layout
+ */
+.transaction-item {
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 12px;
+}
+
+.tx-row {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.tx-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.tx-id {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 6px;
+}
+
+.tx-id a {
+  font-family: monospace;
+  font-size: 12px;
+  color: #3498db;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.tx-timestamp {
+  text-align: right;
+  color: #777;
+  font-size: 12px;
+}
+
+.kas-green {
+  color: #2ecc71;
+}
+
+.kas-red {
+  color: #e74c3c;
+}
+*/
