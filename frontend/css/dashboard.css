@@ -1229,4 +1229,50 @@ body.dark-theme .pagination-button:not(:disabled):hover {
 .kas-red {
   color: #e74c3c;
 }
-*/
+
+/* Add to dashboard.css */
+#wallet-panel .token-box {
+  margin-top: 30px;
+}
+
+#wallet-panel .token-table-container {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Fixed header with scrollable content for token table */
+.token-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.token-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.token-table thead {
+  position: sticky;
+  top: 0;
+  background-color: #f0f8f4; /* Match your existing header background color */
+  z-index: 1;
+}
+
+.token-table th {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 2px solid #ddd;
+  font-weight: bold;
+}
+
+/* Add shadow to sticky header for visual separation */
+.token-table thead::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background-color: rgba(0, 0, 0, 0.1);
+}

@@ -7,6 +7,7 @@ node_modules/
 # Wallets and sensitive user data
 backend/wallets/
 backend/frontend/public/tokens
+backend/node_modules
 
 # OS-specific files
 .DS_Store

@@ -65,46 +65,68 @@
           <button id="receive-coins" class="secondary-button">
             <i class="fas fa-qrcode"></i> Receive
           </button>
-		 <div id="qrContainer" style="display: none; margin-top: 20px; text-align: center;">
-          <canvas id="kaspaQR" style="margin: 10px auto;"></canvas>
-           <div id="qr-address-text" style="margin-top: 10px; font-size: 14px;"></div>
-         </div>
+          <div id="qrContainer" style="display: none; margin-top: 20px; text-align: center;">
+            <canvas id="kaspaQR" style="margin: 10px auto;"></canvas>
+            <div id="qr-address-text" style="margin-top: 10px; font-size: 14px;"></div>
+          </div>
+        </div>
 
+        <!-- KRC20 Tokens Panel (inside wallet panel) -->
+        <div class="token-box">
+          <h2>KRC-20 Tokens</h2>
+          
+          <div class="token-table-container">
+            <table class="token-table">
+              <thead>
+                <tr>
+                  <th>Token</th>
+                  <th>Symbol</th>
+                  <th>Balance</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="token-table-body">
+                <tr>
+                  <td colspan="4" class="loading-state">Loading tokens...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <!-- History Panel -->
-<div id="history-panel" class="content-panel" style="display: none;">
-  <div class="panel-header">
-    <h3>Transaction History</h3>
-    <div class="filter-controls">
-      <select id="history-filter">
-        <option value="all">All Transactions</option>
-        <option value="received">Received</option>
-        <option value="sent">Sent</option>
-        <!--option value="tokens">Token Transfers</option-->
-      </select>
-    </div>
-  </div>
-  
-  <div id="transaction-list" class="transaction-list">
-    <!-- Transaction items will be populated dynamically -->
-    <div class="empty-state">
-      <i class="fas fa-history"></i>
-      <div>No transaction history available</div>
-    </div>
-  </div>
-  
-  <div class="pagination">
-    <button id="prev-page" class="pagination-button" disabled>
-      <i class="fas fa-chevron-left"></i>
-    </button>
-    <span id="page-indicator">Page 0 of 0</span>
-    <button id="next-page" class="pagination-button" disabled>
-      <i class="fas fa-chevron-right"></i>
-    </button>
-  </div>
-</div>
+      <div id="history-panel" class="content-panel" style="display: none;">
+        <div class="panel-header">
+          <h3>Transaction History</h3>
+          <div class="filter-controls">
+            <select id="history-filter">
+              <option value="all">All Transactions</option>
+              <option value="received">Received</option>
+              <option value="sent">Sent</option>
+              <!--option value="tokens">Token Transfers</option-->
+            </select>
+          </div>
+        </div>
+        
+        <div id="transaction-list" class="transaction-list">
+          <!-- Transaction items will be populated dynamically -->
+          <div class="empty-state">
+            <i class="fas fa-history"></i>
+            <div>No transaction history available</div>
+          </div>
+        </div>
+        
+        <div class="pagination">
+          <button id="prev-page" class="pagination-button" disabled>
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span id="page-indicator">Page 0 of 0</span>
+          <button id="next-page" class="pagination-button" disabled>
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
 
       <!-- Settings Panel -->
       <div id="settings-panel" class="content-panel" style="display: none;">
@@ -226,62 +248,34 @@
           </div>
         </div>
  
-        <!-- Save Settings Section -->
-	<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center;">
-  	 <button id="save-settings" class="kaspa-button">
-    	 <i class="fas fa-save"></i> Save Settings
-  	</button>
-	</div>
-
-
-   <!--Final Div for Settings--></div>
-
-<div id="kns" class="content-panel" style="display: none;">
-  <div class="panel">
-    <h2>KNS Lookup</h2>
-    <div class="kns-input-group">
-      <div class="kns-input-wrapper">
-        <input type="text" id="kns-input" placeholder="Enter domain name" onkeydown="if(event.key === 'Enter') checkKNS()">
-        <span class="kns-suffix">.kas</span>
+        <div class="setting-item">
+          <div class="setting-details">
+            <div class="setting-title">Save Settings</div>
+            <div class="setting-description">Click to apply your preferences</div>
+          </div>
+          <button id="save-settings" class="kaspa-button">
+            <i class="fas fa-save"></i> Save
+          </button>
+        </div>
       </div>
-      <button onclick="checkKNS()">Check</button>
-    </div>
-    <div id="kns-result" style="margin-top: 15px;">
-      <!-- Result will be shown here -->
-    </div>
-  </div>
-</div>
 
-
-<!-- Final DIV for anything you want inside the panels -->
-</div>
-
-    <!-- KRC20 Tokens Panel -->
-    <div class="panel token-box">
-      <h2>KRC-20 Tokens</h2>
-      
-      <div class="token-table-container">
-        <table class="token-table">
-          <thead>
-            <tr>
-              <th>Token</th>
-              <th>Symbol</th>
-              <th>Balance</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="token-table-body">
-            <tr>
-              <td colspan="4" class="loading-state">Loading tokens...</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- KNS Panel -->
+      <div id="kns" class="content-panel" style="display: none;">
+        <h2>KNS Lookup</h2>
+        <div class="kns-input-group">
+          <div class="kns-input-wrapper">
+            <input type="text" id="kns-input" placeholder="Enter domain name" onkeydown="if(event.key === 'Enter') checkKNS()">
+            <span class="kns-suffix">.kas</span>
+          </div>
+          <button onclick="checkKNS()">Check</button>
+        </div>
+        <div id="kns-result" style="margin-top: 15px;">
+          <!-- Result will be shown here -->
+        </div>
       </div>
     </div>
-
   </div>
 
-  <script src="/js/wallet/dashboard.js"></script>
+  <script src="/js/modules/index.js"></script>
 </body>
 </html>
-
