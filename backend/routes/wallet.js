@@ -9,6 +9,7 @@ const util = require('util');
 const execPromise = util.promisify(exec);
 const { ensureAuthenticated } = require('../middleware/authMiddleware');
 const db = require('../config/db');
+const fetch = require('node-fetch');
 
 // Helper function to get a random available port
 function getAvailablePort(base = 20000) {
@@ -306,9 +307,6 @@ router.get('/wallet/address', ensureAuthenticated, (req, res) => {
 });
 
 // Get wallet balance
-// Replace this section in your routes/wallet.js file
-
-// Get wallet balance
 router.get('/wallet/balance', ensureAuthenticated, (req, res) => {
   const db = req.db;
   const user = req.session.user;
@@ -384,8 +382,6 @@ router.get('/wallet/balance', ensureAuthenticated, (req, res) => {
   });
 });
 
-
-// Change Wallet Password
 // Change Wallet Password (Safe rebuild w/ optional backup and new wallet file)
 router.post('/change-password', async (req, res) => {
   console.log('[Backend] /wallet/change-password route hit');
@@ -450,7 +446,6 @@ router.post('/change-password', async (req, res) => {
 });
 
 
-
 // Send KAS to an address
 router.post('/wallet/send', ensureAuthenticated, async (req, res) => {
   const db = req.db;
@@ -460,95 +455,94 @@ router.post('/wallet/send', ensureAuthenticated, async (req, res) => {
     return res.status(401).json({ message: 'Not logged in' });
   }
   
-  const { toAddress, amount, password } = req.body;
-  
+  let { toAddress, amount, password, includeFees } = req.body;
+  amount = parseFloat(amount);
+
   // Validate input
   if (!toAddress || !toAddress.startsWith('kaspa:')) {
     return res.status(400).json({ message: 'Invalid Kaspa address' });
   }
-  
-  if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+
+  if (!amount || isNaN(amount) || amount <= 0) {
     return res.status(400).json({ message: 'Invalid amount' });
   }
-  
+
   if (!password) {
     return res.status(400).json({ message: 'Password is required' });
   }
-  
+
   try {
-    // Get user's daemon port and wallet file
     const [userData] = await db.promise().query(
       'SELECT u.daemon_port, w.wallet_file, w.hashed_password FROM users u JOIN wallets w ON u.wallet_id = w.wallet_id WHERE u.id = ?',
       [user.id]
     );
-    
+
     if (!userData || !userData.length) {
       return res.status(404).json({ message: 'Wallet not found' });
     }
-    
+
     const { daemon_port, wallet_file, hashed_password } = userData[0];
-    
-    // Verify password
+
     const passwordMatch = await bcrypt.compare(password, hashed_password);
     if (!passwordMatch) {
       return res.status(401).json({ message: 'Invalid password' });
     }
-    
-    // Check if daemon is running
+
     const isPortInUseResult = await isPortInUse(daemon_port);
     if (!isPortInUseResult) {
-      // Start daemon if not running
       console.log(`Daemon not running, starting it on port ${daemon_port}...`);
       await startWalletDaemon(wallet_file, password, daemon_port);
-      
-      // Wait for daemon to start
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
-    
-    // Prepare the send command
-    const sendCmd = `kaspawallet send -f "${wallet_file}" -p ${password} -d 127.0.0.1:${daemon_port} -t ${toAddress} -v ${amount} -x 100000000`;
-    
+
+    const fixedFeeSompi = 1000; // 0.00001 KAS
+    const effectiveAmount = includeFees
+      ? (amount * 100000000 - fixedFeeSompi) / 100000000
+      : amount;
+    const amountStr = effectiveAmount.toFixed(8);
+
+    const sendCmd = `kaspawallet send -f "${wallet_file}" -p ${password} -d 127.0.0.1:${daemon_port} -t ${toAddress} -v ${amountStr} -r 1000`;
     console.log(`Executing send command: ${sendCmd.replace(password, '*****')}`);
-    
-    // Execute the send command
+
     exec(sendCmd, (error, stdout, stderr) => {
       if (error) {
         console.error('Send transaction error:', stderr || error.message);
-        
-        // Handle known error conditions
+
         if (stderr.includes('insufficient funds')) {
           return res.status(400).json({ message: 'Insufficient funds for this transaction' });
         }
-        
+
         if (stderr.includes('not synced yet')) {
           return res.status(503).json({ message: 'Wallet is not fully synced yet, please try again in a moment' });
         }
-        
+
         return res.status(500).json({ message: 'Failed to send transaction', error: stderr || error.message });
       }
-      
+
       console.log('Send transaction output:', stdout);
-      
-      // Extract transaction ID from output if possible
+
       let txId = null;
       const txIdMatch = stdout.match(/Transaction ID: ([a-f0-9]+)/);
       if (txIdMatch && txIdMatch[1]) {
         txId = txIdMatch[1];
       }
-      
+
       res.json({ 
         message: 'Transaction sent successfully',
         txId,
-        amount,
+        amount: amountStr,
         recipient: toAddress
       });
     });
+
   } catch (error) {
     console.error('Error in send transaction:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
+
+// Export seed phrase upon request
 router.get('/wallet/export', ensureAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
   console.log(`🔍 Export route hit by user ${userId}`);

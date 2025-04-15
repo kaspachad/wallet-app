@@ -10,7 +10,7 @@ const tokenRoutes = require('./routes/tokens');
 const knsRoutes = require('./routes/kns');
 const settingsRoutes = require('./routes/settings');
 const authRoutes = require('./routes/auth');
-
+const minerRoutes = require('./routes/miner');
 
 const DEBUG = true; // ✅ Turn this off to disable all console logs
 
@@ -88,6 +88,10 @@ app.use('/api', walletRoutes);
 app.use('/api', tokenRoutes);
 app.use('/api/kns', knsRoutes);
 app.use('/settings', settingsRoutes);
+app.use('/api/miner', minerRoutes);
+
+
+// Local api calls
 
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
