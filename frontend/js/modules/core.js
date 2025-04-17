@@ -1,7 +1,13 @@
-// core.js - Core application logic for the Kaspa wallet dashboard
-
 // Initialize the entire wallet application
 function initializeWalletApp() {
+  // Initialize and show the loader first
+  KaspaLoader.init();
+  KaspaLoader.config({
+    backgroundOpacity: 0.7,
+    containerSize: '300px'
+  });
+  KaspaLoader.show();
+  
   // Initialize all module UI elements
   initWalletButtons();
   initSettingsUI();
@@ -9,15 +15,26 @@ function initializeWalletApp() {
   setupHistoryFilterHandler();
   setupTabNavigation();
   
-  // Initial data loading
-  loadWalletInfo();
-  updateKaspaPrice();
-  loadUserSettings();
-  
-  // Set up automatic refresh if needed
-  setInterval(updateKaspaPrice, 60000); // Update price every minute
-  
-  console.log('Wallet application initialized successfully!');
+  // Initial data loading - use Promise.all for parallel loading
+  Promise.all([
+    loadWalletInfo(),
+    updateKaspaPrice(),
+    loadUserSettings()
+  ])
+  .then(() => {
+    // Hide loader when all initial data is loaded
+    KaspaLoader.hide();
+    
+    // Set up automatic refresh if needed
+    setInterval(updateKaspaPrice, 60000); // Update price every minute
+    
+    console.log('Wallet application initialized successfully!');
+  })
+  .catch(error => {
+    console.error('Error initializing wallet:', error);
+    // Hide loader even if there's an error
+    KaspaLoader.hide();
+  });
 }
 
 // Tab navigation functionality
@@ -27,6 +44,7 @@ function setupTabNavigation() {
   const historyPanel = document.getElementById('history-panel');
   const settingsPanel = document.getElementById('settings-panel');
   const knsPanel = document.getElementById('kns');
+  const minerPanel = document.getElementById('miner-panel');
 
   // Function to switch tabs
   function switchTab(tabId) {
@@ -35,6 +53,7 @@ function setupTabNavigation() {
     historyPanel.style.display = 'none';
     settingsPanel.style.display = 'none';
     knsPanel.style.display = 'none';
+    minerPanel.style.display = 'none';
     
     // Remove active class from all tabs
     tabLinks.forEach(link => {
@@ -58,6 +77,9 @@ function setupTabNavigation() {
     } else if (tabId === 'kns') {
        knsPanel.style.display = 'block';
        document.querySelector('a[href="#kns"]').parentElement.classList.add('active');
+    } else if (tabId === 'miner') {
+       minerPanel.style.display = 'block';
+       document.querySelector('a[href="#miner"]').parentElement.classList.add('active');
     }
   }
   

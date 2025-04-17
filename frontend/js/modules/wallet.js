@@ -5,6 +5,11 @@ async function loadWalletInfo() {
   const statusEl = document.querySelector('.status');
   const usdValueEl = document.getElementById('wallet-usd');
   
+  // Show loader if available
+  if (window.KaspaLoader) {
+    window.KaspaLoader.show();
+  }
+  
   try {
     // First check if wallet is attached
     const statusRes = await fetch('/api/wallet/status', {
@@ -18,6 +23,12 @@ async function loadWalletInfo() {
       statusEl.textContent = 'No wallet attached';
       balanceEl.textContent = '0 KAS';
       usdValueEl.textContent = '$0.00';
+      
+      // Hide loader before showing popup
+      if (window.KaspaLoader) {
+        window.KaspaLoader.hide();
+      }
+      
       showWalletAttachPopup();
       return;
     }
@@ -101,6 +112,11 @@ async function loadWalletInfo() {
     console.error('Error fetching wallet info:', err);
     addressEl.textContent = 'Wallet load error';
     statusEl.textContent = 'Error';
+  } finally {
+    // Always hide loader when done, even if there's an error
+    if (window.KaspaLoader) {
+      window.KaspaLoader.hide();
+    }
   }
 }
 
@@ -166,6 +182,11 @@ function showWalletCreatePopup() {
     const password = document.getElementById('wallet-password').value.trim();
     if (!password) return alert('Please enter a password.');
     
+    // Show loader if available
+    if (window.KaspaLoader) {
+      window.KaspaLoader.show();
+    }
+    
     try {
       const createBtn = document.getElementById('submit-create-wallet');
       createBtn.textContent = 'Creating...';
@@ -191,6 +212,11 @@ function showWalletCreatePopup() {
     } catch (err) {
       console.error('Wallet creation error:', err);
       alert('Wallet creation failed: ' + err.message);
+    } finally {
+      // Hide loader when done
+      if (window.KaspaLoader) {
+        window.KaspaLoader.hide();
+      }
     }
   };
 }
@@ -395,6 +421,11 @@ function setupSendKasButton() {
         statusDiv.style.display = 'block';
         statusDiv.innerHTML = '<div class="loading-state">Processing transaction...</div>';
         
+        // Show loader if available
+        if (window.KaspaLoader) {
+          window.KaspaLoader.show();
+        }
+        
         try {
           // Call the send API
           const response = await fetch('/api/wallet/send', {
@@ -464,6 +495,11 @@ function setupSendKasButton() {
           // Re-enable send button
           confirmBtn.disabled = false;
           confirmBtn.textContent = 'Try Again';
+        } finally {
+          // Hide loader when done
+          if (window.KaspaLoader) {
+            window.KaspaLoader.hide();
+          }
         }
       });
     });
@@ -583,10 +619,25 @@ function initWalletButtons() {
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
       refreshBtn.classList.add('spin'); // Add animation class
-      await loadWalletInfo();
-      await updateKaspaPrice();
-      await loadTokens();
-      refreshBtn.classList.remove('spin');
+      
+      // Show loader if available
+      if (window.KaspaLoader) {
+        window.KaspaLoader.show();
+      }
+      
+      try {
+        await loadWalletInfo();
+        await updateKaspaPrice();
+        await loadTokens();
+      } catch (error) {
+        console.error('Error refreshing wallet:', error);
+      } finally {
+        // Always hide loader and stop spin animation
+        if (window.KaspaLoader) {
+          window.KaspaLoader.hide();
+        }
+        refreshBtn.classList.remove('spin');
+      }
     });
   }
   

@@ -8,7 +8,6 @@
   <!-- Add Font Awesome for better icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-    <script src="/js/modules/kaspa-loader.js"></script>
 </head>
 <body>
   <div class="dashboard-container">
@@ -26,14 +25,11 @@
           <li><a href="#history">History</a></li>
           <li><a href="#settings">Settings</a></li>
           <li><a href="#kns">KNS Lookup</a></li>
-		  <li><a href="#miner">Mining</a></li>
         </ul>
         <button id="refresh-wallet" class="icon-button" title="Refresh balances">
           <i class="fas fa-sync-alt"></i>
         </button>
-      
-      
-</div>
+      </div>
 
       <!-- Wallet Panel -->
       <div id="wallet-panel" class="content-panel">
@@ -263,30 +259,8 @@
         </div>
       </div>
 
-      
-<!-- Miner Panel -->
-<div id="miner-panel" class="content-panel" style="display: none;">
-  <h2>Kaspa Miner Control</h2>
-
-  <div class="form-group">
-    <label for="miner-address">Mining Address</label>
-    <input type="text" id="miner-address" class="form-control" placeholder="kaspa:..." />
-  </div>
-
-  <div class="controls" style="margin: 15px 0;">
-    <button id="start-mining">Start Mining</button>
-    <button id="stop-mining" disabled>Stop Mining</button>
-  </div>
-
-  <div>Status: <span id="miner-status" class="status disconnected">Disconnected</span></div>
-  <div>Hashrate: <span id="miner-hashrate">0</span> Khash/s</div>
-  <div id="blockFoundNotice" style="margin-top: 10px;"></div>
-  <div id="mining-clock" style="margin-top: 10px;">Mining Time: 00:00:00</div>
-  <div id="mining-blocks" style="margin-top: 5px;">Blocks Found: 0</div>
-</div>
-
-
-<div id="kns" class="content-panel" style="display: none;">
+      <!-- KNS Panel -->
+      <div id="kns" class="content-panel" style="display: none;">
         <h2>KNS Lookup</h2>
         <div class="kns-input-group">
           <div class="kns-input-wrapper">
@@ -303,7 +277,5 @@
   </div>
 
   <script src="/js/modules/index.js"></script>
-  <script src="/js/modules/miner.js"></script>
 </body>
 </html>
-
