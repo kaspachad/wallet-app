@@ -2,7 +2,7 @@ const bip39 = require('bip39');
 const { HDKey } = require('@scure/bip32');
 
 // Replace with your seed phrase (12 or 24 words)
-const mnemonic = "lift net side glue viable record will lady soon outdoor accident lift sentence drum bone join build keen vendor ranch nephew foil actor blue"; 
+const mnemonic = ""; 
 const password = ""; // Optional passphrase (if used)
 
 // Kaspa derivation path: m/44'/111111'/0'/0/0
