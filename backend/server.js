@@ -12,6 +12,12 @@ const settingsRoutes = require('./routes/settings');
 const authRoutes = require('./routes/auth');
 const minerRoutes = require('./routes/miner');
 
+const cron = require('node-cron');
+const { run: fetchPrices } = require('./jobs/fetchKaspaPrices');
+
+cron.schedule('*/5 * * * *', fetchPrices);   // every 5 minutes
+fetchPrices();                               // initial run at startup
+
 const DEBUG = true; // ✅ Turn this off to disable all console logs
 
 // Load env vars

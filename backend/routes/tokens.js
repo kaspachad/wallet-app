@@ -9,10 +9,50 @@ const axios = require('axios');
 const { generateTokenLogo } = require('../utils/tokenLogoGenerator');
 const { fetchTokenLogo } = require('../utils/logoFetcher');
 const { ensureAuthenticated } = require('../middleware/authMiddleware');
+const db = require('../config/db'); 
+const dbPool = require('../config/db');
 
 // Kaspa WebSocket URL and CoinGecko API URL
 const wsUrl = 'ws://127.0.0.1:16110'; // Change to your local node address
 const coingeckoUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=kaspa&vs_currencies=usd';
+
+/* ────────────────────────────────────────────────────────────────
+   Helper: resolve currency
+   ─ 1. ?currency=??? query‑param wins (validated)
+   ─ 2. session user_id → lookup user_settings.currency
+   ─ 3. default 'usd'
+──────────────────────────────────────────────────────────────── */
+async function resolveCurrency (req) {
+  /* 1. explicit query‑param */
+  let cur = (req.query.currency || '').toLowerCase().trim();
+  if (/^[a-z]{3,4}$/.test(cur)) return cur;
+
+  /* 2. user settings (session stores user in req.session.user) */
+  const userId = req.session?.user?.id;
+  if (userId) {
+    const [rows] = await dbPool.query(
+      'SELECT currency FROM user_settings WHERE user_id = ? LIMIT 1',
+      [userId]
+    );
+    if (rows.length && rows[0].currency)
+      return rows[0].currency.toLowerCase();
+  }
+
+  /* 3. fallback */
+  return 'usd';
+}
+
+async function fetchKaspaPriceDirect (currency) {
+  const url = `https://api.coingecko.com/api/v3/simple/price` +
+              `?ids=kaspa&vs_currencies=${currency.toLowerCase()}`;
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
+  const json = await res.json();
+  const val  = json?.kaspa?.[currency.toLowerCase()];
+  if (!val)  throw new Error('Price missing in payload');
+  return val;
+}
+
 
 // Function to fetch wallet balance using Kaspa WebSocket
 async function getBalance(address) {
@@ -66,6 +106,33 @@ async function getBalance(address) {
         }, 10000);
     });
 }
+
+// ─────────────────────────────────────────────────────────────
+// Helper: resolveCurrency(req)
+// 1. ?currency= query‑param   → wins (if /^[a-z]{3,4}$/)
+// 2. session user  → lookup in user_settings
+// 3. default 'usd'
+// ─────────────────────────────────────────────────────────────
+async function resolveCurrency(req, db) {
+  /* 1. explicit query‑param */
+  let cur = (req.query.currency || '').toLowerCase().trim();
+  if (/^[a-z]{3,4}$/.test(cur)) return cur;
+
+  /* 2. look up logged‑in user */
+  const userId = req.session?.user?.id;      // adjust if your session stores id elsewhere
+  if (userId) {
+    const [rows] = await dbPool.query(
+      'SELECT currency FROM user_settings WHERE user_id = ? LIMIT 1',
+      [userId]
+    );
+    if (rows.length && rows[0].currency)
+      return rows[0].currency.toLowerCase();
+  }
+
+  /* 3. fallback */
+  return 'usd';
+}
+
 
 // Function to fetch KRC20 balances from Kasplex API
 async function getKRC20Balances(address) {
@@ -457,35 +524,46 @@ router.get('/token/refresh-logo/:symbol', async (req, res) => {
     }
 });
 
-// Get Kaspa price from API
+// simplified route to fetch currency by user settings
 router.get('/price/kaspa', async (req, res) => {
-    try {
-        // Using CoinGecko API for price data
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=kaspa&vs_currencies=usd');
-        const data = await response.json();
-        
-        if (data && data.kaspa && data.kaspa.usd) {
-            res.json({ 
-                price: data.kaspa.usd,
-                currency: 'USD'
-            });
-        } else {
-            // Fallback price if API fails
-            res.json({ 
-                price: 0.04, 
-                currency: 'USD',
-                source: 'fallback'
-            });
-        }
-    } catch (error) {
-        console.error('Error fetching Kaspa price:', error);
-        // Return fallback price if there's an error
-        res.json({ 
-            price: 0.04, 
-            currency: 'USD',
-            source: 'fallback'
-        });
+  try {
+    const currency  = await resolveCurrency(req);      // e.g. 'ils' / 'jpy'
+    const curUpper  = currency.toUpperCase();
+
+    // 1. try cached value (≤ 10 min old)
+    const [rows] = await dbPool.query(
+      `SELECT price, last_updated
+         FROM kaspa_prices
+        WHERE currency = ? LIMIT 1`,
+      [curUpper]
+    );
+
+    const now = Date.now();
+    const FRESH_MS = 10 * 60 * 1000;                   // 10 minutes
+
+    if (rows.length && now - rows[0].last_updated.getTime() < FRESH_MS) {
+      return res.json({ price: rows[0].price, currency: curUpper });
     }
+
+    // 2. fetch live price for this currency only (fallback / bootstrap)
+    const live = await fetchKaspaPriceDirect(currency);
+
+    // 3. cache it (upsert) for future requests
+    await dbPool.query(
+      `INSERT INTO kaspa_prices (currency, price)
+             VALUES (?, ?)
+   ON DUPLICATE KEY UPDATE
+             price = VALUES(price),
+             last_updated = CURRENT_TIMESTAMP`,
+      [curUpper, live]
+    );
+
+    res.json({ price: live, currency: curUpper });
+
+  } catch (err) {
+    console.error('[price/kaspa]', err.message);
+    res.status(502).json({ message: 'Price unavailable', error: err.message });
+  }
 });
 
 

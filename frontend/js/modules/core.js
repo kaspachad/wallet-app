@@ -1,7 +1,7 @@
 // core.js - Core application logic for the Kaspa wallet dashboard
 
 // Initialize the entire wallet application
-function initializeWalletApp() {
+async function initializeWalletApp() {
   // Initialize all module UI elements
   initWalletButtons();
   initSettingsUI();
@@ -9,15 +9,30 @@ function initializeWalletApp() {
   setupHistoryFilterHandler();
   setupTabNavigation();
   
-  // Initial data loading
-  loadWalletInfo();
-  updateKaspaPrice();
-  loadUserSettings();
-  
-  // Set up automatic refresh if needed
-  setInterval(updateKaspaPrice, 60000); // Update price every minute
-  
-  console.log('Wallet application initialized successfully!');
+  // Initial data loading - with proper sequencing
+  try {
+    // First load user settings (ensures currency preference is available)
+    await loadUserSettings();
+    
+    // Then load wallet info (gets the balance)
+    await loadWalletInfo();
+    
+    // Finally update the price with correct currency
+    await updateKaspaPrice();
+    
+    // Set up automatic refresh if needed
+    setInterval(async () => {
+      try {
+        await updateKaspaPrice();
+      } catch (err) {
+        console.error('Error in automatic price update:', err);
+      }
+    }, 60000); // Update price every minute
+    
+    console.log('Wallet application initialized successfully!');
+  } catch (err) {
+    console.error('Error during wallet initialization:', err);
+  }
 }
 
 // Tab navigation functionality
@@ -128,10 +143,15 @@ function initWalletButtons() {
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
       refreshBtn.classList.add('spin'); // Add animation class
-      await loadWalletInfo();
-      await updateKaspaPrice();
-      await loadTokens();
-      refreshBtn.classList.remove('spin');
+      try {
+        await loadWalletInfo();
+        await updateKaspaPrice();
+        await loadTokens();
+      } catch (err) {
+        console.error('Error refreshing wallet data:', err);
+      } finally {
+        refreshBtn.classList.remove('spin');
+      }
     });
   }
   
@@ -209,3 +229,4 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     // Initialization will be handled by index.js
   });
 }
+

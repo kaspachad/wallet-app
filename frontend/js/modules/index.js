@@ -22,10 +22,10 @@ async function loadAllScripts() {
     await loadScript('js/modules/ui-utils.js');
     
     // Domain-specific modules
+    await loadScript('js/modules/settings.js');
     await loadScript('js/modules/wallet.js');
     await loadScript('js/modules/transactions.js');
     await loadScript('js/modules/tokens.js');
-    await loadScript('js/modules/settings.js');
     await loadScript('js/modules/kns.js');
     
     // Core application logic last (depends on all other modules)
@@ -46,7 +46,7 @@ async function loadAllScripts() {
 
 // Start loading scripts when the DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM loaded, beginning module initialization...');
+  //console.log('DOM loaded, beginning module initialization...');
   loadAllScripts();
 });
 

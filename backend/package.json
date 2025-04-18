@@ -30,6 +30,7 @@
     "kaspa": "^0.13.0",
     "kaspa-wasm": "^0.13.0",
     "mysql2": "^3.14.0",
+    "node-cron": "^3.0.3",
     "node-fetch": "^2.7.0",
     "protobufjs": "^7.4.0",
     "uuid": "^11.1.0",

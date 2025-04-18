@@ -24,6 +24,7 @@ async function loadUserSettings() {
     const currencySelect = document.getElementById('currency-select');
     if (currencySelect && settings.currency) {
       currencySelect.value = settings.currency;
+      localStorage.setItem('walletCurrency', data.settings.currency.toLowerCase());
     }
 
     // Date format
@@ -147,6 +148,7 @@ async function saveUserSettings() {
     const result = await response.json();
     if (result.success) {
       alert('Settings saved successfully!');
+      triggerBalanceRefresh();           // refresh Kaspa balance & value
     } else {
       alert('Failed to save settings: ' + result.message);
     }
@@ -156,21 +158,20 @@ async function saveUserSettings() {
   }
 }
 
-// Handle wallet backup functionality
+// -------------------- Wallet‑backup -----------------------------
 async function backupWallet() {
   try {
     const res = await fetch('/api/wallet/export');
-    if (!res.ok) throw new Error('Export failed');
+    if (!res.ok) throw new Error('export failed');
 
     const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'kaspa-seed.txt';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const url  = window.URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href      = url;
+    a.download  = 'kaspa-seed.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch (err) {
     alert('Failed to export wallet seed.');
@@ -178,34 +179,25 @@ async function backupWallet() {
   }
 }
 
-// View wallet seed phrase
+// -------------------- View seed phrase --------------------------
 function viewSeedPhrase() {
   fetch('/api/wallet/view-seed')
-    .then(res => res.json())
-    .then(data => {
-      if (!data.success) {
-        alert('Error: ' + data.error);
-        return;
-      }
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) return alert('Error: ' + d.error);
 
       const modal = document.createElement('div');
       modal.className = 'wallet-popup';
       modal.innerHTML = `
         <div class="popup-content">
           <h3>Your Seed Phrase</h3>
-          <p style="font-family: monospace; padding: 10px; background: #eee; border-radius: 5px;">
-            ${data.seed}
+          <p style="font-family: monospace; padding: 10px; background:#eee;border-radius:5px;">
+            ${d.seed}
           </p>
-          <div style="margin-top: 15px;">
-            <button id="close-seed-modal">Close</button>
-          </div>
-        </div>
-      `;
+          <button id="close-seed-modal">Close</button>
+        </div>`;
       document.body.appendChild(modal);
-
-      document.getElementById('close-seed-modal').addEventListener('click', () => {
-        modal.remove();
-      });
+      document.getElementById('close-seed-modal').onclick = () => modal.remove();
     })
     .catch(err => {
       console.error('Failed to fetch seed:', err);
@@ -213,75 +205,73 @@ function viewSeedPhrase() {
     });
 }
 
-// Show change password modal
+// -------------------- Change‑password modal ---------------------
 function showChangePasswordModal() {
+  const html = `
+    <div class="wallet-popup">
+      <div class="popup-content">
+        <h3>Change Wallet Password</h3>
+        <div class="form-group">
+          <label for="old-password">Current Password</label>
+          <input type="password" id="old-password" placeholder="Current password">
+        </div>
+        <div class="form-group">
+          <label for="new-password">New Password</label>
+          <input type="password" id="new-password" placeholder="New password">
+        </div>
+        <button id="submit-change-pass">Update</button>
+        <button id="cancel-change-pass">Cancel</button>
+      </div>
+    </div>`;
   const modal = document.createElement('div');
-  modal.className = 'wallet-popup';
-
-  modal.innerHTML = `
-    <div class="popup-content">
-      <h3>Change Wallet Password</h3>
-      <div class="form-group">
-        <label for="old-password">Current Password</label>
-        <input type="password" id="old-password" placeholder="Enter current password" />
-      </div>
-      <div class="form-group">
-        <label for="new-password">New Password</label>
-        <input type="password" id="new-password" placeholder="Enter new password" />
-      </div>
-      <div class="popup-actions">
-        <button id="submit-change-password" class="primary-button">Update</button>
-        <button id="cancel-change-password" class="secondary-button">Cancel</button>
-      </div>
-    </div>
-  `;
-
+  modal.innerHTML = html;
   document.body.appendChild(modal);
 
-  // Cancel button
-  document.getElementById('cancel-change-password').addEventListener('click', () => {
-    modal.remove();
-  });
-
-  // Submit logic
-  document.getElementById('submit-change-password').addEventListener('click', async () => {
-    const oldPassword = document.getElementById('old-password').value.trim();
-    const newPassword = document.getElementById('new-password').value.trim();
-    const backup = false; // toggle manually
-
-    if (!oldPassword || !newPassword) {
-      alert('Please fill in both fields.');
-      return;
-    }
+  document.getElementById('cancel-change-pass').onclick = () => modal.remove();
+  document.getElementById('submit-change-pass').onclick = async () => {
+    const oldPass = document.getElementById('old-password').value.trim();
+    const newPass = document.getElementById('new-password').value.trim();
+    if (!oldPass || !newPass) return alert('Please fill both fields');
 
     try {
-      const response = await fetch('/api/change-password', {
+      const r = await fetch('/api/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ oldPassword, newPassword, backup })
+        body: JSON.stringify({ oldPass, newPass })
       });
-
-      const rawText = await response.text();
-      let result;
-
-      try {
-        result = JSON.parse(rawText);
-      } catch (e) {
-        console.error('[ChangePassword] Failed to parse response:', rawText);
-        alert('Server returned an unexpected response.');
-        return;
-      }
-
-      if (result.success) {
+      const j = await r.json();
+      if (j.success) {
         alert('Password updated successfully.');
         modal.remove();
       } else {
-        alert(result.error || 'Failed to change password.');
+        alert(j.error || 'Failed to change password.');
       }
     } catch (err) {
-      console.error('[ChangePassword] Fetch failed:', err);
-      alert('Network or server error occurred.');
+      console.error('[ChangePassword]', err);
+      alert('Network or server error.');
     }
-  });
+  };
 }
+
+/* --------------------------------------------------------------
+   Refresh wallet after saving settings
+----------------------------------------------------------------*/
+function triggerBalanceRefresh() {
+  if (typeof loadWalletInfo === 'function' && typeof updateKaspaPrice === 'function') {
+    loadWalletInfo().then(updateKaspaPrice).catch(console.error);
+  } else {
+    const btn = document.getElementById('refresh-wallet');
+    if (btn) btn.click();
+  }
+}
+
+/* --------------------------------------------------------------
+   Comment: The duplicate saveUserSettings function was removed.
+   The functionality is already included in the main function above.
+----------------------------------------------------------------*/
+
+/* --------------------------------------------------------------
+   EXPORT the initializer for core.js
+----------------------------------------------------------------*/
+window.initSettingsUI = initSettingsUI;

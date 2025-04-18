@@ -61,10 +61,21 @@ async function loadWalletInfo() {
         if (balanceData.formattedBalance) {
           balanceEl.textContent = balanceData.formattedBalance;
           
-          // Update the USD value if we have the price
+          // Update the currency value if we have the price
           if (window.kaspaPrice && balanceData.parsedBalance) {
-            const usdValue = balanceData.parsedBalance * window.kaspaPrice;
-            usdValueEl.textContent = `$${usdValue.toFixed(2)}`;
+            const value = balanceData.parsedBalance * window.kaspaPrice;
+            
+            // Get current currency from localStorage
+            const userCurrency = localStorage.getItem('walletCurrency') || 'USD';
+            
+            // Use the symbol map for proper currency display
+            const symbolMap = { USD:'$', EUR:'€', ILS:'₪', GBP:'£', JPY:'¥' };
+            const symbol = symbolMap[userCurrency.toUpperCase()] || '';
+            
+            // Apply the same conditional formatting as in updateKaspaPrice
+            usdValueEl.textContent = symbol
+              ? `${symbol}${value.toFixed(2)}`
+              : `${value.toFixed(2)} ${userCurrency.toUpperCase()}`;
           }
         } 
         // Fall back to parsing the raw output
@@ -77,10 +88,21 @@ async function loadWalletInfo() {
             const kasValue = somatis / 100000000; // Convert somatis to KAS
             balanceEl.textContent = `${kasValue.toFixed(8)} KAS`;
             
-            // Update the USD value if we have the price
+            // Update the currency value if we have the price
             if (window.kaspaPrice) {
-              const usdValue = kasValue * window.kaspaPrice;
-              usdValueEl.textContent = `$${usdValue.toFixed(2)}`;
+              const value = kasValue * window.kaspaPrice;
+              
+              // Get current currency from localStorage
+              const userCurrency = localStorage.getItem('walletCurrency') || 'USD';
+              
+              // Use the symbol map for proper currency display
+              const symbolMap = { USD:'$', EUR:'€', ILS:'₪', GBP:'£', JPY:'¥' };
+              const symbol = symbolMap[userCurrency.toUpperCase()] || '';
+              
+              // Apply the same conditional formatting as in updateKaspaPrice
+              usdValueEl.textContent = symbol
+                ? `${symbol}${value.toFixed(2)}`
+                : `${value.toFixed(2)} ${userCurrency.toUpperCase()}`;
             }
           } else {
             balanceEl.textContent = 'Error parsing balance';
@@ -523,36 +545,57 @@ function setupReceiveKasButton() {
   }
 }
 
-// Function to update Kaspa USD value
-async function updateKaspaPrice() {
+
+// ─────────────────────────────────────────
+// Function to update Kaspa value
+// ─────────────────────────────────────────
+async function updateKaspaPrice () {
   try {
-    const res = await fetch('/api/price/kaspa', {
-      credentials: 'include'
-    });
     
-    const data = await res.json();
+    // before fetch:
+    const userCurrency = localStorage.getItem('walletCurrency');   // 'usd', 'jpy', …
+    const res = await fetch(`/api/price/kaspa${userCurrency ? '?currency=' + userCurrency : ''}`,
+                        { credentials: 'include' });
+
+    const data = await res.json();                 // { price, currency }
+
+    if (!data || !data.price) return;
+
+    // make the price globally available
+    window.kaspaPrice = data.price;
+
+    // pull fresh DOM references every time (avoids scope issues)
+    const balanceEl  = document.getElementById('wallet-balance');
+    const valueEl    = document.getElementById('wallet-usd');
+
+    if (!balanceEl || !valueEl) return;
+
+    // balanceEl innerText looks like "123.456 KAS"
+    const match = balanceEl.textContent.match(/([\d.]+)\s*KAS/);
+    if (!match) return;
+
+    const kasBalance = parseFloat(match[1]);
+
+    /* map ISO → symbol for a friendlier display */
+    const symbolMap = { USD:'$', EUR:'€', ILS:'₪', GBP:'£', JPY:'¥' };
+    const symbol    = symbolMap[data.currency] || '';
+ 
+    const estValue = kasBalance * data.price;
+	
+    // Remove this line that's causing the problem
+    // valueEl.textContent =`${symbol}${estValue.toFixed(2)} ${data.currency}`;
     
-    if (data && data.price) {
-      // Store price for later use
-      window.kaspaPrice = data.price;
-      
-      // If we have a balance, update the USD value
-      const balanceEl = document.getElementById('wallet-balance');
-      const usdValueEl = document.getElementById('wallet-usd');
-      
-      const balanceText = balanceEl.textContent;
-      const balanceMatch = balanceText.match(/([\d.]+)\s*KAS/);
-      
-      if (balanceMatch && balanceMatch[1]) {
-        const kasBalance = parseFloat(balanceMatch[1]);
-        const usdValue = kasBalance * data.price;
-        usdValueEl.textContent = `$${usdValue.toFixed(2)}`;
-      }
-    }
+    // Keep only this conditional formatting
+    valueEl.textContent =
+     symbol                                   // $, €, ¥, £, ₪ …
+     ? `${symbol}${estValue.toFixed(2)}`    // show only the symbol
+     : `${estValue.toFixed(2)} ${data.currency}`; // else fall back to code
   } catch (err) {
     console.error('Error fetching Kaspa price:', err);
   }
 }
+
+
 
 // Initialize wallet-related buttons
 function initWalletButtons() {
