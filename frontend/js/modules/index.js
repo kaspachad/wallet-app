@@ -7,7 +7,6 @@ function loadScript(src) {
     const script = document.createElement('script');
     script.src = src;
     script.onload = () => {
-      //console.log(`Loaded: ${src}`);
       resolve();
     };
     script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
@@ -18,7 +17,10 @@ function loadScript(src) {
 // Load all scripts in dependency order
 async function loadAllScripts() {
   try {
-    // Base utilities first (no dependencies)
+    // Load the Kaspa Loader first
+    await loadScript('js/modules/kaspa-loader.js');
+    
+    // Base utilities next
     await loadScript('js/modules/ui-utils.js');
     
     // Domain-specific modules
@@ -49,4 +51,3 @@ document.addEventListener('DOMContentLoaded', () => {
   //console.log('DOM loaded, beginning module initialization...');
   loadAllScripts();
 });
-

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kaspa Miner Control</title>
+  <link rel="stylesheet" href="miner.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Kaspa Miner Dashboard</h1>
+    
+    <label for="address">Mining Address:</label>
+    <input type="text" id="address" placeholder="kaspa:..." />
+
+    <div class="controls">
+      <button id="startBtn">Start Mining</button>
+      <button id="stopBtn" disabled>Stop Mining</button>
+    </div>
+
+    <div id="status">Status: <span id="connectionStatus">Disconnected</span></div>
+    <div id="hashRate">Hashrate: <span id="hashValue">0</span> Khash/s</div>
+  </div>
+
+  <script src="miner.js"></script>
+</body>
+</html>
+

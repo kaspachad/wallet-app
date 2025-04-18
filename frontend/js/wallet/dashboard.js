@@ -1,4 +1,13 @@
 document.addEventListener('DOMContentLoaded', async () => {
+   // Initialize the Kaspa loader
+  KaspaLoader.init();
+
+  // Configure it if needed (optional)
+  KaspaLoader.config({
+    backgroundOpacity: 0.7,
+    containerSize: '300px'
+  });
+
   const addressEl = document.getElementById('wallet-address');
   const balanceEl = document.getElementById('wallet-balance');
   const statusEl = document.querySelector('.status');
@@ -6,6 +15,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const copyBtn = document.getElementById('copy-wallet');
   const refreshBtn = document.getElementById('refresh-wallet');
   const tokenTableBody = document.getElementById('token-table-body');
+
+    // Show loader immediately when page loads to indicate initial data loading
+  KaspaLoader.show();
 
   // === Load settings on page load ===
   async function loadUserSettings() {
@@ -57,6 +69,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Function to load wallet status, address and balance
   async function loadWalletInfo() {
+
+    // Show loader before starting data fetch
+    KaspaLoader.show();
+
     try {
       // First check if wallet is attached
       const statusRes = await fetch('/api/wallet/status', {
@@ -70,6 +86,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusEl.textContent = 'No wallet attached';
         balanceEl.textContent = '0 KAS';
         usdValueEl.textContent = '$0.00';
+        // Hide loader before showing popup
+        KaspaLoader.hide();
         showWalletAttachPopup();
         return;
       }
@@ -153,6 +171,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error fetching wallet info:', err);
       addressEl.textContent = 'Wallet load error';
       statusEl.textContent = 'Error';
+    } finally {
+      // Always hide loader when done, even if there was an error
+      KaspaLoader.hide();
     }
   }
 
@@ -286,11 +307,18 @@ document.getElementById('save-settings').addEventListener('click', async () => {
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
       refreshBtn.classList.add('spin'); // Add animation class
+      KaspaLoader.show();
+      
+      try {
       await loadWalletInfo();
       await updateKaspaPrice();
       await loadTokens();
-      refreshBtn.classList.remove('spin');
-    });
+      } finally {
+        // Hide loader and stop spin animation
+        KaspaLoader.hide();
+        refreshBtn.classList.remove('spin');
+      }  
+   });
   }
 
   // ==================== KRC-20 Token Functions ====================
@@ -1707,6 +1735,8 @@ if (address && canvas) {
   // Load user settings
   loadUserSettings();
 
+  // Hide loader after all initial loading is complete
+  KaspaLoader.hide();
   
   // Set up refresh interval for price
   setInterval(updateKaspaPrice, 60000); // Update price every minute

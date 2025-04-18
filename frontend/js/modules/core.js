@@ -2,6 +2,8 @@
 
 // Initialize the entire wallet application
 async function initializeWalletApp() {
+  // Initialize toast notification system
+  ToastNotification.init();
   // Initialize all module UI elements
   initWalletButtons();
   initSettingsUI();
@@ -30,8 +32,10 @@ async function initializeWalletApp() {
     }, 60000); // Update price every minute
     
     console.log('Wallet application initialized successfully!');
+    ToastNotification.success('Wallet loaded successfully');
   } catch (err) {
     console.error('Error during wallet initialization:', err);
+    ToastNotification.error('Failed to initialize wallet');
   }
 }
 
@@ -229,4 +233,5 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     // Initialization will be handled by index.js
   });
 }
+
 

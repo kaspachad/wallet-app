@@ -40,6 +40,7 @@ async function loadWalletInfo() {
       }
     } catch (err) {
       console.error('Error fetching wallet address:', err);
+    ToastNotification.error('Error fetching wallet address');
       addressEl.textContent = 'Error loading address';
     }
     
@@ -117,6 +118,7 @@ async function loadWalletInfo() {
       }
     } catch (err) {
       console.error('Error fetching wallet balance:', err);
+    ToastNotification.error('Error fetching wallet balance');
       balanceEl.textContent = 'Error loading balance';
     }
   } catch (err) {

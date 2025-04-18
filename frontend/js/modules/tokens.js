@@ -38,7 +38,6 @@ async function loadTokens() {
 }
 
 // Render token table with the fetched token data
-// Render token table with the fetched token data
 function renderTokenTable(tokens) {
   const tokenTableBody = document.getElementById('token-table-body');
   if (!tokenTableBody) return;

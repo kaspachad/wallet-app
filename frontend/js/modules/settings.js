@@ -24,7 +24,7 @@ async function loadUserSettings() {
     const currencySelect = document.getElementById('currency-select');
     if (currencySelect && settings.currency) {
       currencySelect.value = settings.currency;
-      localStorage.setItem('walletCurrency', data.settings.currency.toLowerCase());
+      localStorage.setItem('walletCurrency', settings.currency.toLowerCase());
     }
 
     // Date format
@@ -117,7 +117,7 @@ function initSettingsUI() {
   const advancedSettingsBtn = document.getElementById('advanced-settings');
   if (advancedSettingsBtn) {
     advancedSettingsBtn.addEventListener('click', function() {
-      alert('This would open advanced wallet configuration options.');
+      ToastNotification.error("This would open advanced wallet configuration options.");
       // In a real implementation, this would show advanced settings
     });
   }
@@ -147,14 +147,14 @@ async function saveUserSettings() {
 
     const result = await response.json();
     if (result.success) {
-      alert('Settings saved successfully!');
+      ToastNotification.success("Settings saved successfully!");
       triggerBalanceRefresh();           // refresh Kaspa balance & value
     } else {
-      alert('Failed to save settings: ' + result.message);
+      ToastNotification.error('Failed to save settings: ' + result.message);
     }
   } catch (err) {
     console.error('Error saving settings:', err);
-    alert('An error occurred while saving settings.');
+    ToastNotification.error("An error occurred while saving settings.");
   }
 }
 
@@ -174,7 +174,7 @@ async function backupWallet() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch (err) {
-    alert('Failed to export wallet seed.');
+    ToastNotification.error("Failed to export wallet seed.");
     console.error(err);
   }
 }
@@ -201,7 +201,7 @@ function viewSeedPhrase() {
     })
     .catch(err => {
       console.error('Failed to fetch seed:', err);
-      alert('Failed to retrieve seed phrase.');
+      ToastNotification.error("Failed to retrieve seed phrase.");
     });
 }
 
@@ -231,7 +231,7 @@ function showChangePasswordModal() {
   document.getElementById('submit-change-pass').onclick = async () => {
     const oldPass = document.getElementById('old-password').value.trim();
     const newPass = document.getElementById('new-password').value.trim();
-    if (!oldPass || !newPass) return alert('Please fill both fields');
+    if (!oldPass || !newPass) return ToastNotification.error("Please fill both fields");
 
     try {
       const r = await fetch('/api/change-password', {
@@ -242,14 +242,14 @@ function showChangePasswordModal() {
       });
       const j = await r.json();
       if (j.success) {
-        alert('Password updated successfully.');
+        ToastNotification.error("Password updated successfully.");
         modal.remove();
       } else {
         alert(j.error || 'Failed to change password.');
       }
     } catch (err) {
       console.error('[ChangePassword]', err);
-      alert('Network or server error.');
+      ToastNotification.error("Network or server error.");
     }
   };
 }
@@ -275,3 +275,4 @@ function triggerBalanceRefresh() {
    EXPORT the initializer for core.js
 ----------------------------------------------------------------*/
 window.initSettingsUI = initSettingsUI;
+
